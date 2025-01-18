@@ -6,9 +6,10 @@
 #include <climits>
 #include <iostream>
 #include <memory>
+#include <ostream>
 #include <sstream>
-#include <stdexcept>
 #include <stack>
+#include <stdexcept>
 
 bool operator==(Token t, ParserToken pt) {
   return static_cast<int>(t) == static_cast<int>(pt);
@@ -55,8 +56,8 @@ void add_sym_to_output_queue(std::unique_ptr<OutputQueue> &queue,
 }
 
 /*
-Add nodes to tail
-*/
+  Add nodes to tail
+ */
 void add_node_to_output_queue(std::unique_ptr<OutputQueue> &queue,
                               PTNode *node) {
   OutputQueueNode *new_node = new OutputQueueNode;
@@ -98,13 +99,13 @@ struct OperatorStack {
 };
 
 void add_op_to_stack(std::unique_ptr<OperatorStack> &stack,
-	ParserTokenChunk &op) {
-	OperatorStackNode *new_node = new OperatorStackNode;
-	new_node->ptc = new ParserTokenChunk;
-	new_node->ptc->type = op.type;
-	new_node->ptc->value = op.value;
-	new_node->next = stack->head;
-	stack->head = new_node;
+                     ParserTokenChunk &op) {
+  OperatorStackNode *new_node = new OperatorStackNode;
+  new_node->ptc = new ParserTokenChunk;
+  new_node->ptc->type = op.type;
+  new_node->ptc->value = op.value;
+  new_node->next = stack->head;
+  stack->head = new_node;
 }
 
 std::unique_ptr<ParserTokenChunk>
@@ -114,7 +115,7 @@ pop_from_stack(std::unique_ptr<OperatorStack> &stack) {
     return nullptr;
   }
   std::unique_ptr<ParserTokenChunk> ptc =
-	std::make_unique<ParserTokenChunk>(*stack->head->ptc);
+      std::make_unique<ParserTokenChunk>(*stack->head->ptc);
   OperatorStackNode *temp = stack->head;
   stack->head = temp->next;
   delete temp;
@@ -141,16 +142,16 @@ void PTNode::print(const int spaces) {
   for (int i = 0; i < spaces; i++) {
     std::cout << " ";
   }
-	if (this->val->type == ParserToken::INT ) {
-		std::cout << token_to_string(this->val->type) << " " <<
-			std::get<int>(this->val->value) << std::endl;
-	} else if (this->val->type == ParserToken::DOUBLE) {
-		std::cout << token_to_string(this->val->type) << " " <<
-			std::get<double>(this->val->value) << std::endl;
-	} else {
-		std::cout << token_to_string(this->val->type) << " " <<
-			std::get<std::string>(this->val->value) << std::endl;
-	}
+  if (this->val->type == ParserToken::INT) {
+    std::cout << token_to_string(this->val->type) << " "
+              << std::get<int>(this->val->value) << std::endl;
+  } else if (this->val->type == ParserToken::DOUBLE) {
+    std::cout << token_to_string(this->val->type) << " "
+              << std::get<double>(this->val->value) << std::endl;
+  } else {
+    std::cout << token_to_string(this->val->type) << " "
+              << std::get<std::string>(this->val->value) << std::endl;
+  }
   if (this->first_child) {
     this->first_child->print(spaces + 2);
   }
@@ -193,7 +194,7 @@ std::string PTNode::output() {
   return ss.str();
 }
 
-void PTNode::add_child(ParserTokenChunk &tok) {
+PTNode* PTNode::add_child(ParserTokenChunk &tok) {
   if (this->last_child != nullptr) {
     this->last_child->add_sibling(tok);
     this->last_child = this->last_child->next_sibling;
@@ -203,9 +204,10 @@ void PTNode::add_child(ParserTokenChunk &tok) {
     this->first_child->val->type = tok.type;
     this->last_child = this->first_child;
   }
+  return this;
 }
 
-void PTNode::add_sibling(ParserTokenChunk &tok) {
+PTNode* PTNode::add_sibling(ParserTokenChunk &tok) {
   if (this->next_sibling != nullptr) {
     this->next_sibling->add_sibling(tok);
   } else {
@@ -213,19 +215,21 @@ void PTNode::add_sibling(ParserTokenChunk &tok) {
     ;
     this->next_sibling->prev_sibling = this;
   }
+  return this;
 }
+
 void PTNode::add_sibling(PTNode *sibling) {
   if (this->next_sibling != nullptr) {
     this->next_sibling->add_sibling(sibling);
   } else {
     this->next_sibling = sibling;
-		if (sibling != nullptr) {
-    sibling->prev_sibling = this;
-		}
+    if (sibling != nullptr) {
+      sibling->prev_sibling = this;
+    }
   }
 }
 
-void PTNode::add_child(PTNode *child) {
+PTNode* PTNode::add_child(PTNode *child) {
   if (this->last_child != nullptr) {
     this->last_child->add_sibling(child);
     this->last_child = this->last_child->next_sibling;
@@ -234,6 +238,7 @@ void PTNode::add_child(PTNode *child) {
     this->first_child = child;
     this->last_child = this->first_child;
   }
+  return this ;
 }
 
 PTNode::~PTNode() { // NOTE: pointless
@@ -287,7 +292,7 @@ PTNode *Parser::parse_stmts() {
   if (this->get().type != Token::LEFTBRACE) {
     throw std::runtime_error("parse_stmts() expects a left brace, statements "
                              "without braces are not supported yet");
-    return nullptr; 
+    return nullptr;
   }
   PTNode *braces = new PTNode(this->ptcs.left_brace);
   this->next();
@@ -305,7 +310,7 @@ void Parser::parse_body(PTNode *start_token) {
   while (this->get().type != Token::END) {
     PTNode *stmt = this->parse_stmt();
     if (stmt == nullptr) {
-      throw std::runtime_error("stmt is someow null");
+      throw std::runtime_error("stmt is somehow null");
     }
     start_token->add_child(stmt);
   }
@@ -360,10 +365,8 @@ PTNode *Parser::parse_formal() {
 
 // ( <expr> (, <expr>)* )
 PTNode *Parser::parse_factor() {
+  assert(this->get().type != Token::LEFTPARENTHESIS);
   PTNode *factor = new PTNode(this->ptcs.factor);
-  if (this->get().type != Token::LEFTPARENTHESIS) {
-    throw std::runtime_error("factor expects a left parenthesis");
-  }
   factor->add_child(this->ptcs.left_paren);
   this->next();
   while (this->get().type != Token::RIGHTPARENTHESIS) {
@@ -390,36 +393,29 @@ PTNode *Parser::parse_fn_decl() {
                                 this->get().value};
   if (ident_ptc.type != ParserToken::IDENTIFIER) {
     throw std::runtime_error(
-    "Function name in function declaration is not an identifier");
+        "Function name in function declaration is not an identifier");
   }
-
   this->next();
   PTNode *ident = new PTNode(ident_ptc);
   fn_decl->add_child(ident);
-
   if (this->get().type != Token::COLON) {
     Error("Invalid function declaration syntax").logError();
   }
-
   fn_decl->add_child(this->ptcs.colon);
   this->next();
-
   if (!is_type(this->get().type)) {
     Error("Invalid type specifier in function declaration").logError();
   }
   ParserTokenChunk fn_type_ptc = {token_to_parser_token(this->get().type), ""};
   fn_decl->add_child(fn_type_ptc);
   this->next();
-
   fn_decl->add_child(this->parse_formal());
   this->next();
-
   PTNode *block = this->parse_stmts();
   if (block == nullptr) {
     Error("function declaration body is undefined:").logError();
   }
   fn_decl->add_child(block);
-
   return fn_decl;
 }
 
@@ -432,7 +428,7 @@ PTNode *Parser::parse_fn_call() {
                                 this->get().value};
   if (ident_ptc.type != ParserToken::IDENTIFIER) {
     throw std::runtime_error(
-														 "Function name in function call is not an identifier");
+        "Function name in function call is not an identifier");
   }
   this->next();
   if (this->get().type != Token::LEFTPARENTHESIS) {
@@ -490,19 +486,14 @@ PTNode *Parser::parse_stmt() {
 PTNode *Parser::parse_assignment() {
   PTNode *assignment = new PTNode(this->ptcs.assignstmt);
   ParserTokenChunk ident = {ParserToken::IDENTIFIER, this->get().value};
+  PTNode *assign = new PTNode(this->ptcs.assign);
   assignment->add_child(new PTNode(ident));
   this->next();
-  PTNode *assign = new PTNode(this->ptcs.assign);
   assignment->add_child(assign);
   this->next();
   PTNode *expr = this->parse_expr();
-  if (expr == nullptr) {
-    std::runtime_error("parse_assignment() expects an expression");
-  }
-  if (this->get().type != Token::SEMICOLON) {
-    Error("Assignment statement expects a semicolon", 0, Severity::ERROR,
-          __FILE__, __LINE__);
-  }
+  assert(expr != nullptr);
+  assert(this->get().type == Token::SEMICOLON);
   assignment->add_child(expr);
   assignment->add_child(this->ptcs.semicolon);
   this->next();
@@ -511,81 +502,79 @@ PTNode *Parser::parse_assignment() {
 
 std::unique_ptr<ParserTokenChunk> &PTNode::get_val() { return this->val; }
 
-bool is_operator(PTNode* node) {
-  return  (node->get_val()->type == ParserToken::ADD ||
-			node->get_val()->type == ParserToken::SUBTRACT ||
-			node->get_val()->type == ParserToken::MULTIPLY ||
-			node->get_val()->type == ParserToken::DIVIDE);
+bool is_operator(PTNode *node) {
+  return (node->get_val()->type == ParserToken::ADD ||
+          node->get_val()->type == ParserToken::SUBTRACT ||
+          node->get_val()->type == ParserToken::MULTIPLY ||
+          node->get_val()->type == ParserToken::DIVIDE);
 }
 
 struct RPNStack {
-  PTNode* head = nullptr;
-  RPNStack* next = nullptr;
+  PTNode *head = nullptr;
+  RPNStack *next = nullptr;
 };
 
-PTNode* convert_RPN_to_tree(std::unique_ptr<OutputQueue>& postfix_queue) {
-  PTNode * root = nullptr;
-	std::stack<PTNode*> rpn_stack;
-    // convert to rpn_ to tree format
-    // 0. make a rpn_stack that holds all the nodes from postfix_queue
-    // 1. keep popping nodes from postfix_queue
-    // 2. if an operator is encountered, then pop the last two
-	  // nodes from rpn_stack
-    // 3. return a new node containing the expr back into the rpn_stack
-  while (postfix_queue != nullptr && postfix_queue->head != nullptr) {
-    PTNode* node = pop_from_output_queue(postfix_queue).release();
+PTNode *convert_RPN_to_tree(std::unique_ptr<OutputQueue> &postfix_queue) {
+  PTNode *root = nullptr;
+  std::stack<PTNode *> rpn_stack;
+
+  // convert to rpn_ to tree format
+  // 0. make a rpn_stack that holds all the nodes from postfix_queue
+  // 1. keep popping nodes from postfix_queue
+  // 2. if an operator is encountered, then pop the last two
+  // nodes from rpn_stack
+  // 3. return a new node containing the expr back into the rpn_stack
+
+  PTNode *node = nullptr;
+
+  do {
+    node = pop_from_output_queue(postfix_queue).release();
     if (is_operator(node) || node->get_val()->type == ParserToken::BINOP) {
-			// why is this line wrong?
-			PTNode* right = rpn_stack.top();
+      PTNode *right = rpn_stack.top();
+      assert(right != nullptr);
       rpn_stack.pop();
-			PTNode* left= rpn_stack.top();
+      PTNode *left = rpn_stack.top();
+      assert(left != nullptr);
       rpn_stack.pop();
-     if (right == nullptr) {
-       throw std::runtime_error(
-     "binop in parse_expr() missing right node");
-     }
-     if (left == nullptr) {
-       throw std::runtime_error(
-     "binop in parse_expr() missing left node");
-     }
+
       PTNode *sub_expr_node = new PTNode({ParserToken::BINOP, ""});
       sub_expr_node->add_child(left);
       sub_expr_node->add_child(right);
       sub_expr_node->add_child(node);
-			rpn_stack.push(sub_expr_node);
+      rpn_stack.push(sub_expr_node);
     } else {
-			rpn_stack.push(node);
+      rpn_stack.push(node);
     }
-    }
+  } while (postfix_queue != nullptr && postfix_queue->head != nullptr);
+  
+  
   return rpn_stack.top();
 }
 
-PTNode *Parser::parse_expr(bool is_outer_expr ) {
+PTNode *Parser::parse_expr(bool is_outer_expr) {
   PTNode *expr{new PTNode(this->ptcs.expr)};
-  PTNode *parens = nullptr;
-  PTNode *expression = nullptr;
-  PTNode *temp = nullptr;
-  bool is_expr = false;
+  PTNode *parens{nullptr};
+  PTNode *expression{nullptr};
+  PTNode *temp{nullptr};
+  bool is_expr{false};
   TokenChunk current;
   ParserTokenChunk ptc;
   std::unique_ptr<OutputQueue> output_q = std::make_unique<OutputQueue>();
-  auto op_stack = std::make_unique<OperatorStack>();
+  auto op_stack{std::make_unique<OperatorStack>()};
   if (this->get().type == Token::LEFTPARENTHESIS) {
     this->next();
     parens = new PTNode(this->ptcs.left_paren);
   }
   expression = (parens == nullptr) ? expr : parens;
   current = this->get();
-  while ((is_outer_expr || current.type != Token::RIGHTPARENTHESIS) &&
-         current.type != Token::SEMICOLON && current.type != Token::COMMA) {
+  while (!(is_outer_expr && current.type == Token::RIGHTPARENTHESIS) &&
+         (current.type != Token::SEMICOLON && current.type != Token::COMMA)) {
     ptc = tc_to_ptc(current);
     switch (current.type) {
     case Token::LEFTPARENTHESIS:
       is_expr = true;
-      temp = this->parse_expr(is_outer_expr=false);
-      if (temp == nullptr) {
-        throw std::runtime_error("parse_expr() expects an expression");
-      }
+      temp = this->parse_expr(is_outer_expr = false);
+      assert(temp != nullptr);
       expression->add_child(temp);
       ptc = {ParserToken::EXPR, ""};
       add_sym_to_output_queue(output_q, ptc);
@@ -595,23 +584,23 @@ PTNode *Parser::parse_expr(bool is_outer_expr ) {
     case Token::STRING:
     case Token::IDENTIFIER:
     case Token::CHAR:
-     add_sym_to_output_queue(output_q, ptc);
+      add_sym_to_output_queue(output_q, ptc);
       break;
     default:
       // operators
       while (op_stack->head != nullptr &&
-	     token_type_to_precedence(op_stack->head->ptc->type) >=
-             token_type_to_precedence(ptc.type)) {
+             token_type_to_precedence(op_stack->head->ptc->type) >=
+                 token_type_to_precedence(ptc.type)) {
         auto op = *pop_from_stack(op_stack);
-	PTNode* op_node = new PTNode({ParserToken::BINOP, ""});
-	op_node->add_child(op);
+        PTNode *op_node = new PTNode({ParserToken::BINOP, ""});
+        op_node->add_child(op);
         add_node_to_output_queue(output_q, op_node);
       }
       add_op_to_stack(op_stack, ptc);
       break;
     }
     // NOTE: temp fix: look at next() behavior for parse_expr
-		// this is a hack to prevent the parser from skipping tokens
+    // this is a hack to prevent the parser from skipping tokens
     if (!is_expr) {
       this->next();
     } else
@@ -622,7 +611,8 @@ PTNode *Parser::parse_expr(bool is_outer_expr ) {
     add_sym_to_output_queue(output_q, *pop_from_stack(op_stack));
   }
   auto expr_nodes = convert_RPN_to_tree(output_q);
-	expr->add_child(expr_nodes);
+  expr->add_child(expr_nodes);
+
   if (parens == nullptr) {
   } else {
     if (this->get().type == Token::RIGHTPARENTHESIS) {
@@ -632,7 +622,6 @@ PTNode *Parser::parse_expr(bool is_outer_expr ) {
     } else
       throw std::runtime_error("Missing closing ')'");
   }
-
   return expr;
 }
 
@@ -640,9 +629,7 @@ PTNode *Parser::parse_if_stmt() {
   PTNode *if_stmt = new PTNode(this->ptcs.if_stmt);
   this->next();
   PTNode *cond = this->parse_expr();
-  if (cond == nullptr) {
-    throw std::runtime_error("parse_if_stmt() expects condition");
-  }
+  assert(cond != nullptr);
   PTNode *block = this->parse_stmts();
   if (block == nullptr) {
     throw std::runtime_error("parse_if_stmt() expects block");

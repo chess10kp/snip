@@ -1,7 +1,6 @@
 #ifndef SEMANTIC_ANALYZER_H
 #define SEMANTIC_ANALYZER_H
 
-#include "ast.h"
 #include "globals.h"
 #include "parser.h"
 #include <memory>
@@ -12,21 +11,19 @@
 class SemanticAnalyzer {
 public:
   SemanticAnalyzer(std::unique_ptr<PTNode> &root);
-
-private:
-  ASTNode *root;
+  void analyze();
 };
 
 struct SymbolTableEntry {
   ParserToken type;
-  std::variant<char, int, std::string> ident_value;
+	std::variant<int, std::string, double, bool, char> ident_value;
 };
 
 class SymbolTable {
 public:
   SymbolTable();
-  ParserTokenChunk *get_tok() const;
   int insert_tok(ParserTokenChunk *, PTNode *);
+  ParserTokenChunk *get_tok(const std::string&) ;
   int insert_tok(PTNode *, PTNode *);
 
 private:
@@ -43,6 +40,7 @@ public:
   void enter_scope();
   void exit_scope();
   int get_scope() const;
+  ParserTokenChunk *get_tok(std::string) ;
   SymbolTable *get_top_table();
   SymbolTable *get_current_scope();
 

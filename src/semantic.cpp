@@ -10,79 +10,40 @@
 #include <utility>
 #include <variant>
 
-typedef std::variant<char, int, std::string> ident_value;
-
 extern bool is_type(const Token tok);
 extern Token parser_token_to_token(const ParserToken &pt);
+extern void get_variant_value_and_assign_to(ParserTokenChunk &,
+                                            SymbolTableEntryValue &);
+extern void get_variant_value_and_assign_to(SymbolTableEntryValue &,
+                                            SymbolTableEntryValue &);
 
 SemanticAnalyzer::SemanticAnalyzer(std::unique_ptr<PTNode> &root) {
   if (root == nullptr) {
-    throw std::runtime_error("tokens not receieved in semantic analyzer");
+    throw std::runtime_error("no tokens to analyze");
   }
-  PTNode *root_node = root.get();
 
+  PTNode *root_node = root.get();
   if (root_node->get_type() != "START") {
     throw std::runtime_error("root node of parsed tokens is not of type START");
   }
   PTNode *child = root_node->get_first_child();
-  while (child != nullptr) {
-    if (child->get_type() == "STMT") {
-      PTNode *stmt_type = child->get_first_child();
-      if (stmt_type->get_type() == "VARDECL") {
-        VarDeclAST *var_decl = new VarDeclAST();
-        PTNode *type_ast_node = stmt_type->get_first_child();
-        // DEBUG:
-        std::cout << "type: "
-                  << token_to_string(type_ast_node->get_val().get()->type)
-                  << std::endl;
-        PTNode *ident_ast_node = type_ast_node->get_next_sibling();
-        std::cout << "ident: "
-                  << token_to_string(ident_ast_node->get_val().get()->type)
-                  << std::endl;
-        PTNode *expr_parsed_node =
-            ident_ast_node->get_next_sibling()->get_next_sibling();
-        // for each expr_node
-        while (expr_parsed_node != nullptr) {
-          ParserTokenChunk *expr = expr_parsed_node->get_val().get();
-
-          std::cout << "expr: "
-                    << token_to_string(expr_parsed_node->get_val().get()->type)
-                    << std::endl;
-          expr_parsed_node = expr_parsed_node->get_next_sibling();
-        }
-        std::cout << "\n";
-      }
+  while (child and child->get_type() == "STMT") {
+    auto child_node = child->get_first_child();
+    if (child_node->get_type() == "IFSTMT") {
+    } else if (child_node->get_type() == "WHILESTMT") {
+    } else if (child_node->get_type() == "VARDECL") {
+    } else if (child_node->get_type() == "FNDECL") {
     } else {
-      throw std::runtime_error(
-          "(semantic): unexpected node type in top level of parsed tokens");
+      throw std::runtime_error("unexpected token type");
     }
     child = child->get_next_sibling();
   }
 }
 
-// START
-//   STMT
-//     VARDECL
-//       INTK
-//       IDENTIFIER
-//       ASSIGN
-//       EXPR
-//         EXPR
-//           EXPR
-//             IDENTIFIER
-//             IDENTIFIER
-//             SUBTRACT -
-//           LEFTPARENTHESIS
-//           RIGHTPARENTHESIS
-//         EXPR
-//           IDENTIFIER
-//           EXPR
-//             IDENTIFIER
-//             EXPR
-//             MULTIPLY *
-//           ADD +
-//       SEMICOLON
-// END
+/**
+ * Walk through the parsed_tokens, then build the AST
+ */
+void SemanticAnalyzer::analyze() {}
 
 ExprNode *parse_expr(PTNode *expr_node) {
   ExprNode *ast_expr_node = nullptr;
@@ -137,29 +98,57 @@ int SymbolTableS::insert(PTNode *node, PTNode *type) {
   return 0;
 }
 
-/* aux method to insert a identifier into the sym_table
+/** aux method to insert a identifier into the sym_table
  *
  * @param node ParserTokenChunk*
  */
 int SymbolTable::insert_tok(ParserTokenChunk *tok, PTNode *ident_type) {
   std::string ident_name = std::get<std::string>(tok->value);
-  if (ident_type->get_val()->type == ParserToken::CHAR) {
-    SymbolTableEntry entry = {ParserToken::CHAR, '\0'};
-    this->table.insert(std::make_pair(ident_name, entry));
-  } else if (ident_type->get_val()->type == ParserToken::INT) {
-    SymbolTableEntry entry = {ParserToken::INT, 0};
-    this->table.insert(std::make_pair(ident_name, entry));
-  } else if (ident_type->get_val()->type == ParserToken::STRING) {
-    SymbolTableEntry entry = {ParserToken::STRING, ""};
-    this->table.insert(std::make_pair(ident_name, entry));
-  } else if (ident_type->get_val()->type == ParserToken::BOOL) {
-    SymbolTableEntry entry = {ParserToken::STRING, 0};
-    this->table.insert(std::make_pair(ident_name, entry));
+  SymbolTableEntry entry = {ParserToken(), '\0'};
+  switch (ident_type->get_val()->type) {
+  case ParserToken::CHAR:
+  case ParserToken::INT:
+    entry = {ident_type->get_val()->type, '\0'};
+    break;
+  case ParserToken::STRING:
+    entry = {ident_type->get_val()->type, ""};
+    break;
+  case ParserToken::BOOL:
+    entry = {ident_type->get_val()->type, 0};
+    break;
   }
+  this->table.insert(std::make_pair(ident_name, entry));
   return 0;
 }
 
-/* insert a identifier into the sym_table
+/** get a identifier from the sym_table
+ *
+ * @param ident_name std::string
+ * @return ParserTokenChunk*
+ */
+ParserTokenChunk *SymbolTable::get_tok(const std::string &ident_name) {
+  auto entry_it = table.find(ident_name);
+  if (entry_it == this->table.end()) {
+    return nullptr;
+  }
+  ParserTokenChunk *chunk = new ParserTokenChunk;
+  chunk->type = entry_it->second.type;
+  get_variant_value_and_assign_to(entry_it->second.ident_value, chunk->value);
+  return chunk;
+}
+
+ParserTokenChunk *SymbolTableS::get_tok(std::string ident_name) {
+  ParserTokenChunk *ident = nullptr;
+  for (SymbolTable *table : this->tables) {
+    ParserTokenChunk *ident = table->get_tok(ident_name);
+    if (ident != nullptr) {
+      break;
+    }
+  }
+  return ident;
+}
+
+/** insert a identifier into the sym_table
  *
  * @param node PTNode*
  */

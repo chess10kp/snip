@@ -3,10 +3,19 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <string_view>
-#include <vector>
 
 #include "./lexer.h"
+
+std::string get_string_from_stack(std::string& s) {
+  int i = 0; 
+  std::string ret = "";
+  while (s[i] != '\0') {
+    ret += s[i];
+    i ++;
+  }
+  std::cout << "s: " << s << i << std::endl;
+  return ret;
+}
 
 enum class State : short {
   START,
@@ -143,7 +152,6 @@ int insert_into_linked_list(token_node *&head, TokenChunk tok,
   return num_tokens++;
 }
 
-// TODO: take in a string_view and use that to lex the file
 Lexer::Lexer(std::string input) {
   if (input.empty()) {
     std::exit(0);
@@ -151,7 +159,7 @@ Lexer::Lexer(std::string input) {
     this->input = input;
     this->len = input.length();
     // reserve the char stack in advance
-    this->current_token.reserve(1000);
+    this->current_token.reserve(10000);
   }
 }
 
@@ -164,6 +172,7 @@ void Lexer::process_token(token_node *&head) {
     insert_into_linked_list(head, retToken, this->num_tokens);
   }
 }
+
 void Lexer::process_literal_token(TokenChunk &retToken, token_node *&head) {
   if (this->current_token_ptr != 0) {
     this->current_token[this->current_token_ptr] = '\0';
@@ -191,7 +200,6 @@ void Lexer::tokenize(std::unique_ptr<TokenChunk[]> &token_stack) {
       this->current_token_ptr = 0;
       i++;
     }
-
     // if the end of the file is not reached, then the cases are:
     // 1. you might have hit a blank space, in which case,
     //  1. get_token() if there is a token in this->char_stack
@@ -207,14 +215,19 @@ void Lexer::tokenize(std::unique_ptr<TokenChunk[]> &token_stack) {
     //  literal into the list
     // 4. If you don't encounter a whitespace or a literal, then keep going by
     // calling read_next()
-
     else {
       this->current_char = this->input[this->ptr];
       this->current_token[this->current_token_ptr] = '\0';
       if (this->current_char == ' ' || this->current_char == '\t') {
         if (this->current_token[0] != '\0') {
           this->current_token[this->current_token_ptr] = '\0';
+
+          // unable to get the string from the char stack since it wasn't initialized properly
+          // this is a hack to get the string from the char stack
+          std::string tokenString = get_string_from_stack(this->current_token);
           TokenChunk retToken = get_token();
+          retToken.value = tokenString;
+
           insert_into_linked_list(head, retToken, this->num_tokens);
           this->current_token[0] = '\0';
           this->current_token_ptr = 0;
@@ -428,7 +441,7 @@ TokenChunk Lexer::get_token() {
   // statement so the token is atleast two chars long
   while (i <= token_len) {
     switch (currentState) {
-    // ([a-z][A-z][0-9]|_)*
+      // ([a-z][A-z][0-9]|_)*
     case State::IDENTIFIER:
       retToken = Token::IDENTIFIER;
       while (i < token_len) {
@@ -762,30 +775,35 @@ TokenChunk Lexer::get_token() {
         i--;
         retToken = Token::UNDEFINED;
         currentState = State::END;
-      }
-      break;
-    case State::NOT_1:
-      if (this->current_token[i] == '\0') {
-        currentState = State::END;
-        retToken = Token::NOT;
-      } else if (this->current_token[i] == '=') {
-        currentState = State::NOTEQUAL_2;
-        i++;
-      } else {
-        currentState = State::END;
-        retToken = Token::UNDEFINED;
+        break;
+      case State::EQUAL_2:
         i--;
+        currentState = State::END;
+        retToken = Token::EQUAL;
+        break;
+      case State::NOT_1:
+        if (this->current_token[i] == '\0') {
+          currentState = State::END;
+          retToken = Token::NOT;
+        } else if (this->current_token[i] == '=') {
+          currentState = State::NOTEQUAL_2;
+          i++;
+        } else {
+          currentState = State::END;
+          retToken = Token::UNDEFINED;
+          i--;
+        }
+        break;
+      case State::END:
+        if (retToken == Token::UNDEFINED) {
+          std::cerr << "Undefined behavior" << std::endl;
+          std::exit(-10);
+        }
+        return {retToken, this->current_token};
+        break;
+      default:
+        break;
       }
-      break;
-    case State::END:
-      if (retToken == Token::UNDEFINED) {
-        std::cerr << "Undefined behavior" << std::endl;
-        std::exit(-10);
-      }
-      return {retToken, this->current_token};
-      break;
-    default:
-      break;
     }
   }
   std::cout << "Did not finish lexing " << std::endl;
