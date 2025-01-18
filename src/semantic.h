@@ -2,11 +2,12 @@
 #define SEMANTIC_ANALYZER_H
 
 #include "globals.h"
-#include "parser.h"
 #include <memory>
 #include <unordered_map>
 #include <variant>
 #include <vector>
+
+class PTNode;
 
 class SemanticAnalyzer {
 public:
@@ -22,7 +23,7 @@ struct SymbolTableEntry {
 class SymbolTable {
 public:
   SymbolTable();
-  int insert_tok(ParserTokenChunk *, PTNode *);
+  PTNode* insert_tok(ParserTokenChunk *, PTNode *);
   ParserTokenChunk *get_tok(const std::string&) ;
   int insert_tok(PTNode *, PTNode *);
 

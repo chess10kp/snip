@@ -1,8 +1,9 @@
-#include "globals.h"
-#include <memory>
-
 #ifndef PARSER_H
 #define PARSER_H
+
+#include "globals.h"
+#include <memory>
+#include "semantic.h"
 
 bool is_type(const Token tok);
 
@@ -98,6 +99,8 @@ private:
   // make a list of const nodes that can be used to initialize to when
   // parsing, instead of making new parserChunks
   StmtPTCs ptcs;
+  SymbolTableS *sym_table = nullptr;
+  
 };
 
 #endif // !PARSER_H
