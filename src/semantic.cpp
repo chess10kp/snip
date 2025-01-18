@@ -1,14 +1,11 @@
 #include "./semantic.h"
-#include "ast.h"
 #include "globals.h"
 #include "helper.h"
 #include "parser.h"
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
-#include <variant>
 
 extern bool is_type(const Token tok);
 extern Token parser_token_to_token(const ParserToken &pt);
@@ -33,6 +30,7 @@ SemanticAnalyzer::SemanticAnalyzer(std::unique_ptr<PTNode> &root) {
     } else if (child_node->get_type() == "WHILESTMT") {
     } else if (child_node->get_type() == "VARDECL") {
     } else if (child_node->get_type() == "FNDECL") {
+    } else if (child_node->get_type() == "ASSIGNSTMT") {
     } else {
       throw std::runtime_error("unexpected token type");
     }
@@ -102,7 +100,7 @@ int SymbolTableS::insert(PTNode *node, PTNode *type) {
  *
  * @param node ParserTokenChunk*
  */
-int SymbolTable::insert_tok(ParserTokenChunk *tok, PTNode *ident_type) {
+PTNode *SymbolTable::insert_tok(ParserTokenChunk *tok, PTNode *ident_type) {
   std::string ident_name = std::get<std::string>(tok->value);
   SymbolTableEntry entry = {ParserToken(), '\0'};
   switch (ident_type->get_val()->type) {
@@ -118,7 +116,8 @@ int SymbolTable::insert_tok(ParserTokenChunk *tok, PTNode *ident_type) {
     break;
   }
   this->table.insert(std::make_pair(ident_name, entry));
-  return 0;
+
+  return ident_type;
 }
 
 /** get a identifier from the sym_table
