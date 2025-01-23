@@ -225,9 +225,9 @@ void Lexer::tokenize(std::unique_ptr<TokenChunk[]> &token_stack) {
           // unable to get the string from the char stack since it wasn't
           // initialized properly this is a hack to get the string from the char
           // stack
-          // std::string tokenString = get_string_from_stack(this->current_token);
+          std::string tokenString = get_string_from_stack(this->current_token);
           TokenChunk retToken = get_token();
-          // retToken.value = tokenString;
+          retToken.value = tokenString;
 
           insert_into_linked_list(head, retToken, this->num_tokens);
           this->current_token[0] = '\0';
@@ -340,12 +340,14 @@ void Lexer::tokenize(std::unique_ptr<TokenChunk[]> &token_stack) {
             }
             read_next();
             i++;
+            int start_idx = i;
             while (this->input[this->ptr] != '"') {
               read_next();
               i++;
             }
-            if (this->input[this->ptr] == '"')
-              retToken = {Token::STRING, this->current_token};
+            if (this->input[this->ptr] == '"') {
+              retToken = {Token::STRING, this->input.substr(start_idx, this->ptr - start_idx)};
+            }
             else
               retToken = {Token::UNDEFINED, this->current_token};
             insert_into_linked_list(head, retToken, this->num_tokens);
@@ -396,6 +398,7 @@ void Lexer::read_next() noexcept {
   this->current_char = this->input[this->ptr];
   this->ptr += 1;
   this->next_ptr += 1;
+  this->current_token[this->ptr + 1] = '\0';
 }
 
 // overloaded method to avoid multiple function calls calling read()
