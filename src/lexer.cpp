@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cctype>
 #include <cstdlib>
 #include <iostream>
@@ -6,14 +7,13 @@
 
 #include "./lexer.h"
 
-std::string get_string_from_stack(std::string& s) {
-  int i = 0; 
+std::string get_string_from_stack(std::string &s) {
+  int i = 0;
   std::string ret = "";
   while (s[i] != '\0') {
     ret += s[i];
-    i ++;
+    i++;
   }
-  std::cout << "s: " << s << i << std::endl;
   return ret;
 }
 
@@ -222,11 +222,12 @@ void Lexer::tokenize(std::unique_ptr<TokenChunk[]> &token_stack) {
         if (this->current_token[0] != '\0') {
           this->current_token[this->current_token_ptr] = '\0';
 
-          // unable to get the string from the char stack since it wasn't initialized properly
-          // this is a hack to get the string from the char stack
-          std::string tokenString = get_string_from_stack(this->current_token);
+          // unable to get the string from the char stack since it wasn't
+          // initialized properly this is a hack to get the string from the char
+          // stack
+          // std::string tokenString = get_string_from_stack(this->current_token);
           TokenChunk retToken = get_token();
-          retToken.value = tokenString;
+          // retToken.value = tokenString;
 
           insert_into_linked_list(head, retToken, this->num_tokens);
           this->current_token[0] = '\0';
@@ -353,19 +354,14 @@ void Lexer::tokenize(std::unique_ptr<TokenChunk[]> &token_stack) {
             i++;
             read_next();
           } else if (this->current_char == '\'') {
-            if (this->input[this->ptr + 2] == '\'') {
-              insert_into_linked_list(
-                  head,
-                  {Token::CHAR, std::string(1, this->input[this->ptr + 1])},
-                  this->num_tokens);
-              read_next(3);
-              i += 3;
-              this->current_token[0] = '\0';
-              this->current_token_ptr = 0;
-            } else {
-              // error out since a char either too long or too short
-              throw std::runtime_error("Expected expression for char at line ");
-            }
+            assert(this->input[this->ptr + 2] == '\'');
+            insert_into_linked_list(
+                head, {Token::CHAR, std::string(1, this->input[this->ptr + 1])},
+                this->num_tokens);
+            read_next(3);
+            i += 3;
+            this->current_token[0] = '\0';
+            this->current_token_ptr = 0;
           } else [[likely]] {
             this->current_token[this->current_token_ptr] = this->current_char;
             this->current_token_ptr++;
@@ -418,7 +414,7 @@ void Lexer::read_next(int count) noexcept {
 TokenChunk Lexer::get_token() {
   int i = 0;
   int token_len = this->current_token_ptr;
-  while (std::isdigit(this->current_token[i])) {
+  while (this->current_token[i] != '\0' && std::isdigit(this->current_token[i])) {
     i++;
   }
   if (this->current_token[i] == '\0') {
