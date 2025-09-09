@@ -1,8 +1,12 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Snip.AST;
 
 public abstract class AstNode
 {
     public abstract string NodeType { get; }
+    public int Line { get; set; }
+    public int Column { get; set; }
 }
 
 public abstract class StatementNode : AstNode { }
@@ -17,7 +21,7 @@ public class ProgramNode : AstNode
 
 public class LetStatementNode : DeclarationNode
 {
-    public IdentifierNode Name { get; set; }
+    public IdentifierNode? Name { get; set; }
     public ExpressionNode? Value { get; set; }
     public string? TypeAnnotation { get; set; }
     public override string NodeType => "LetStatement";
@@ -173,27 +177,27 @@ public class ExpressionStatementNode : StatementNode
     public override string NodeType => "ExpressionStatement";
 }
 
-public class IntegerLiteralNode : ExpressionNode
+public class IntegerLiteralNode(string value) : ExpressionNode
 {
-    public long Value { get; set; }
+    public long Value { get; set; } = long.Parse(value);
     public override string NodeType => "IntegerLiteral";
 }
 
-public class FloatLiteralNode : ExpressionNode
+public class FloatLiteralNode(double value) : ExpressionNode
 {
-    public double Value { get; set; }
+    public double Value { get; set; } = value;
     public override string NodeType => "FloatLiteral";
 }
 
-public class StringLiteralNode : ExpressionNode
+public class StringLiteralNode(string value) : ExpressionNode
 {
-    public string Value { get; set; }
+    public string Value { get; set; } = value;
     public override string NodeType => "StringLiteral";
 }
 
-public class BooleanLiteralNode : ExpressionNode
+public class BooleanLiteralNode(bool value) : ExpressionNode
 {
-    public bool Value { get; set; }
+    public bool Value { get; set; } = value;
     public override string NodeType => "BooleanLiteral";
 }
 
@@ -207,9 +211,9 @@ public class UndefinedLiteralNode : ExpressionNode
     public override string NodeType => "UndefinedLiteral";
 }
 
-public class IdentifierNode : ExpressionNode
+public class IdentifierNode(string name) : ExpressionNode
 {
-    public string Name { get; set; }
+    public string Name = name;
     public override string NodeType => "Identifier";
 }
 
@@ -239,6 +243,13 @@ public class UnaryExpressionNode : ExpressionNode
     public override string NodeType => "UnaryExpression";
 }
 
+public class PowerExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "PowerExpression";
+}
+
 public class AssignmentExpressionNode : ExpressionNode
 {
     public ExpressionNode Left { get; set; }
@@ -254,6 +265,43 @@ public class ConditionalExpressionNode : ExpressionNode
     public ExpressionNode Alternative { get; set; }
     public override string NodeType => "ConditionalExpression";
 }
+
+public class AddExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "AddExpression";
+}
+
+public class SubtractExpressionNode (ExpressionNode l, ExpressionNode r) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = l;
+    public ExpressionNode Right { get; set; } = r;
+    public override string NodeType => "SubtractExpression";
+}
+
+public class MultiplyExpressionNode(ExpressionNode l, ExpressionNode r) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = l;
+    public ExpressionNode Right { get; set; } = r;
+    public override string NodeType => "MultiplyExpression";
+}
+
+
+public class DivideExpressionNode (ExpressionNode l, ExpressionNode r) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = l;
+    public ExpressionNode Right { get; set; } = r;
+    public override string NodeType => "DivideExpression";
+}
+
+public class ModuloExpressionNode(ExpressionNode l, ExpressionNode r) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = l;
+    public ExpressionNode Right { get; set; } = r;
+    public override string NodeType => "ModuloExpression";
+}
+
 
 public class FunctionExpressionNode : ExpressionNode
 {
@@ -288,30 +336,30 @@ public class NewExpressionNode : ExpressionNode
     public override string NodeType => "NewExpression";
 }
 
-public class MemberExpressionNode : ExpressionNode
+public class MemberExpressionNode(ExpressionNode obj, ExpressionNode p) : ExpressionNode
 {
-    public ExpressionNode Object { get; set; }
-    public ExpressionNode Property { get; set; }
+    public ExpressionNode Object { get; set; } = obj;
+    public ExpressionNode Property { get; set; } = p;
     public bool Computed { get; set; }
     public override string NodeType => "MemberExpression";
 }
 
-public class ArrayExpressionNode : ExpressionNode
+public class ArrayExpressionNode (List<ExpressionNode> els) : ExpressionNode
 {
-    public List<ExpressionNode?> Elements { get; set; } = new();
+    public List<ExpressionNode>? Elements { get; set; } = els;
     public override string NodeType => "ArrayExpression";
 }
 
-public class ObjectExpressionNode : ExpressionNode
+public class ObjectExpressionNode(List<PropertyNode> properties) : ExpressionNode
 {
-    public List<PropertyNode> Properties { get; set; } = new();
+    public List<PropertyNode> Properties { get; set; } = properties;
     public override string NodeType => "ObjectExpression";
 }
 
-public class PropertyNode : AstNode
+public class PropertyNode(string k, ExpressionNode v) : AstNode
 {
-    public string Key { get; set; }
-    public ExpressionNode Value { get; set; }
+    public string Key { get; set; } = k;
+    public ExpressionNode Value { get; set; } = v;
     public bool Computed { get; set; }
     public bool Shorthand { get; set; }
     public override string NodeType => "Property";

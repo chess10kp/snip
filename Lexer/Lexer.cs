@@ -129,8 +129,8 @@ public enum TokenType
 
 public class Token
 {
-    private TokenType Type { get; set; }
-    private string Value { get; set; }
+    public TokenType Type { get; set; }
+    public string Value { get; set; }
     private int Line { get; set; }
     private int Column { get; set; }
     private int Position { get; set; }
