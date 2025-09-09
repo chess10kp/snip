@@ -15,7 +15,7 @@ namespace Snip
             try
             {
                 source = cli.Parse(args);
-                if (source == null)
+                if (source is null)
                 {
                     return;
                 }
@@ -33,7 +33,10 @@ namespace Snip
 
             var lexer = new Lexer.Lexer(source);
             lexer.Tokenize();
-            Console.WriteLine(lexer.ToString());
+
+            var parser = new Parser.Parser(lexer);
+            var program = parser.parse();
+            
             Console.Write("Finish Compilation");
         }
     }

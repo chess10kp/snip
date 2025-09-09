@@ -6,17 +6,16 @@ namespace Snip.Parser;
 public class Parser
 {
    private int _ptr = 0;
-   private Lexer.Lexer _lexer { get; set; }
    private List<Token> _token { get; set; }
    public Parser(Lexer.Lexer lexer)
    {
-      _lexer = lexer;
       _token = lexer.Tokenize();
+      Console.WriteLine(_token);
    }
 
-   private Token? _peek()
+   private Token? _peek(int lookahead = 0)
    {
-      if (_ptr >= _token.Count) return _token[_ptr++];
+      if (_ptr < _token.Count) return _token[_ptr+lookahead];
       Console.WriteLine("Peek called out of index");
       return null;
 
@@ -233,6 +232,7 @@ private PowerExpressionNode ParsePowerExpression() {
 
 
    public ProgramNode parse() {
+      Console.WriteLine("Parsing program");
       var program = new ProgramNode();
       while (_peek() != null) {
          var tok = _peek();
@@ -242,6 +242,7 @@ private PowerExpressionNode ParsePowerExpression() {
          var node = this.ParseStatement(tok);
          program.Statements.Add(node);
       }
+      Console.WriteLine("Parsing program finished");
       return program;
    }
 
