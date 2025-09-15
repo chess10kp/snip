@@ -35,6 +35,7 @@ namespace Snip
             lexer.Tokenize();
 
             var parser = new Parser.Parser(lexer);
+            var program = parser.Parse();
             // parser.PrintParseTree(program);
             Console.Write("Finish Compilation");
         }

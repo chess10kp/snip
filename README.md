@@ -2,6 +2,13 @@
 
 Snip is a small, interpreted programming language built with C#.
 
+### Grammar
+`snip
+T -> F MUL F
+T -> F DIV F
+F -> (E) | NUMBER | VAR
+`
+
 ### Prerequisites
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)

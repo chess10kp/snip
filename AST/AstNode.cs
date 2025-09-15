@@ -53,7 +53,7 @@ public class IfStatementNode : StatementNode
 
 public class WhileStatementNode : StatementNode
 {
-    public ExpressionNode Condition { get; set; }
+    public required ExpressionNode Condition { get; set; }
     public BlockStatementNode Body { get; set; }
     public override string NodeType => "WhileStatement";
 }
@@ -176,6 +176,12 @@ public class ExpressionStatementNode : StatementNode
     public ExpressionNode Expression { get; set; }
     public override string NodeType => "ExpressionStatement";
 }
+
+public class EOF : StatementNode
+{
+    public override string NodeType => "EOF";
+}
+
 
 public class IntegerLiteralNode(string value) : ExpressionNode
 {
@@ -414,8 +420,8 @@ public class ImportDeclarationNode : StatementNode
 
 public class ImportSpecifierNode : AstNode
 {
-    public IdentifierNode Local { get; set; }
     public IdentifierNode? Imported { get; set; }
+    public IdentifierNode Local { get; set; }
     public override string NodeType => "ImportSpecifier";
 }
 
