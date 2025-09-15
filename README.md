@@ -1,3 +1,4 @@
+
 # Snip Lang
 
 Snip is a small, interpreted programming language built with C#.

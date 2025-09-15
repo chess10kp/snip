@@ -3,10 +3,19 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <string_view>
-#include <vector>
 
 #include "./lexer.h"
+
+std::string get_string_from_stack(std::string& s) {
+  int i = 0; 
+  std::string ret = "";
+  while (s[i] != '\0') {
+    ret += s[i];
+    i ++;
+  }
+  std::cout << "s: " << s << i << std::endl;
+  return ret;
+}
 
 enum class State : short {
   START,
@@ -78,6 +87,7 @@ enum class State : short {
   COMMA_1,
   IDENTIFIER,
   INVALID,
+  EXCLAIMATION_1,
 };
 
 State get_initial_state(char c) {
@@ -131,16 +141,9 @@ bool isSpace(char c) noexcept {
 
 bool isComment(char c) noexcept { return (c == '#'); }
 
-// make a linked list to store all the parsed tokens the first time to avoid
-// reallocating for each insertion
-struct token_node {
-  Token tok;
-  std::string value;
-  token_node *next = nullptr;
-};
-
-// NOTE: the tokens are inserted in reverse order
-int insert_into_linked_list(token_node *&head, Token tok, int &num_tokens) {
+// the tokens are inserted in reverse order
+int insert_into_linked_list(token_node *&head, TokenChunk tok,
+                            int &num_tokens) {
   token_node *new_node = new token_node();
   new_node->tok = tok;
   token_node *temp = head;
@@ -149,7 +152,6 @@ int insert_into_linked_list(token_node *&head, Token tok, int &num_tokens) {
   return num_tokens++;
 }
 
-// take in a string_view and use that to lex the file
 Lexer::Lexer(std::string input) {
   if (input.empty()) {
     std::exit(0);
@@ -157,26 +159,47 @@ Lexer::Lexer(std::string input) {
     this->input = input;
     this->len = input.length();
     // reserve the char stack in advance
-    this->current_token.reserve(1000);
+    this->current_token.reserve(10000);
   }
 }
 
+void Lexer::process_token(token_node *&head) {
+  if (this->current_token_ptr != 0) {
+    this->current_token[this->current_token_ptr] = '\0';
+    TokenChunk retToken = get_token();
+    this->current_token[0] = '\0';
+    this->current_token_ptr = 0;
+    insert_into_linked_list(head, retToken, this->num_tokens);
+  }
+}
+
+void Lexer::process_literal_token(TokenChunk &retToken, token_node *&head) {
+  if (this->current_token_ptr != 0) {
+    this->current_token[this->current_token_ptr] = '\0';
+    TokenChunk tok = this->get_token();
+    this->current_token[0] = '\0';
+    this->current_token_ptr = 0;
+    insert_into_linked_list(head, tok, this->num_tokens);
+  }
+  insert_into_linked_list(head, retToken, this->num_tokens);
+  read_next();
+}
+
 // calls read_next to update ptr values
-void Lexer::tokenize(std::unique_ptr<Token[]> &token_stack) {
+void Lexer::tokenize(std::unique_ptr<TokenChunk[]> &token_stack) {
   token_node *head = nullptr;
   int i = 0;
   while (i < this->len) {
     if (this->next_ptr >= this->len) { // reached EOF
       this->current_token[this->current_token_ptr] = '\0';
       if (this->current_token[0] != '\0') {
-        const Token token = get_token();
+        const TokenChunk token = get_token();
         insert_into_linked_list(head, token, this->num_tokens);
       }
       this->current_token[0] = '\0';
       this->current_token_ptr = 0;
       i++;
     }
-
     // if the end of the file is not reached, then the cases are:
     // 1. you might have hit a blank space, in which case,
     //  1. get_token() if there is a token in this->char_stack
@@ -192,14 +215,19 @@ void Lexer::tokenize(std::unique_ptr<Token[]> &token_stack) {
     //  literal into the list
     // 4. If you don't encounter a whitespace or a literal, then keep going by
     // calling read_next()
-
     else {
       this->current_char = this->input[this->ptr];
       this->current_token[this->current_token_ptr] = '\0';
       if (this->current_char == ' ' || this->current_char == '\t') {
         if (this->current_token[0] != '\0') {
           this->current_token[this->current_token_ptr] = '\0';
-          Token retToken = get_token();
+
+          // unable to get the string from the char stack since it wasn't initialized properly
+          // this is a hack to get the string from the char stack
+          std::string tokenString = get_string_from_stack(this->current_token);
+          TokenChunk retToken = get_token();
+          retToken.value = tokenString;
+
           insert_into_linked_list(head, retToken, this->num_tokens);
           this->current_token[0] = '\0';
           this->current_token_ptr = 0;
@@ -209,159 +237,98 @@ void Lexer::tokenize(std::unique_ptr<Token[]> &token_stack) {
       } else if (this->current_char == '\n') {
         if (this->current_token[0] != '\0') {
           this->current_token[this->current_token_ptr] = '\0';
-          Token retToken = get_token();
+          TokenChunk retToken = get_token();
           insert_into_linked_list(head, retToken, this->num_tokens);
           this->current_token[0] = '\0';
           this->current_token_ptr = 0;
         }
         i++;
         this->read_next();
-
       } else {
-        Token retToken;
-        switch (this->input[this->ptr]) { // check for literals
-        case '{':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            this->current_token[0] = '\0';
-            this->current_token_ptr = 0;
-            insert_into_linked_list(head, retToken, this->num_tokens);
+        TokenChunk retToken;
+        switch (this->input[this->ptr]) {
+        case '#': // comments
+          while (this->input[this->ptr] != '\n') {
+            i++;
+            this->read_next();
           }
-          retToken = Token::LEFTBRACE;
+          break;
+        case '{':
+          retToken = {Token::LEFTBRACE, "{"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
-          insert_into_linked_list(head, retToken, this->num_tokens);
           break;
         case '}':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            this->current_token[0] = '\0';
-            this->current_token_ptr = 0;
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          retToken = Token::RIGHTBRACE;
-          insert_into_linked_list(head, retToken, this->num_tokens);
+          retToken = {Token::RIGHTBRACE, "}"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
           break;
         case '(':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            this->current_token[0] = '\0';
-            this->current_token_ptr = 0;
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          retToken = Token::LEFTPARENTHESIS;
-          insert_into_linked_list(head, retToken, this->num_tokens);
+          retToken = {Token::LEFTPARENTHESIS, "("};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
           break;
         case ')':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            this->current_token[0] = '\0';
-            this->current_token_ptr = 0;
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          retToken = Token::RIGHTPARENTHESIS;
-          insert_into_linked_list(head, retToken, this->num_tokens);
+          retToken = {Token::RIGHTPARENTHESIS, ")"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
           break;
         case '.':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            this->current_token[0] = '\0';
-            this->current_token_ptr = 0;
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          retToken = Token::PERIOD;
-          insert_into_linked_list(head, retToken, this->num_tokens);
+          retToken = {Token::PERIOD, "."};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
           break;
         case ',':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            this->current_token[0] = '\0';
-            this->current_token_ptr = 0;
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          retToken = Token::COMMA;
-          insert_into_linked_list(head, retToken, this->num_tokens);
+          retToken = {Token::COMMA, ","};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
+          break;
+        case ':':
+          retToken = {Token::COLON, ":"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
+          i++;
+          break;
+        case '!':
+          retToken = {Token::EXCLAIM, "!"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
+          i++;
           break;
         case '*':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            this->current_token[0] = '\0';
-            this->current_token_ptr = 0;
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          retToken = Token::MULTIPLY;
-          insert_into_linked_list(head, retToken, this->num_tokens);
+          retToken = {Token::MULTIPLY, "*"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
           break;
         case '+':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          this->current_token[0] = '\0';
-          this->current_token_ptr = 0;
-          retToken = Token::ADD;
-          insert_into_linked_list(head, retToken, this->num_tokens);
-          i++;
-          read_next();
+          retToken = {Token::ADD, "+"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           break;
         case '-':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          this->current_token[0] = '\0';
-          this->current_token_ptr = 0;
-          retToken = Token::SUBTRACT;
-          insert_into_linked_list(head, retToken, this->num_tokens);
+          retToken = {Token::SUBTRACT, "-"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
           break;
         case '/':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          this->current_token[0] = '\0';
-          this->current_token_ptr = 0;
-          retToken = Token::DIVIDE;
-          insert_into_linked_list(head, retToken, this->num_tokens);
+          retToken = {Token::DIVIDE, "/"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
           break;
         case ';':
-          if (this->current_token_ptr != 0) {
-            this->current_token[this->current_token_ptr] = '\0';
-            retToken = get_token();
-            insert_into_linked_list(head, retToken, this->num_tokens);
-          }
-          this->current_token[0] = '\0';
-          this->current_token_ptr = 0;
-          retToken = Token::SEMICOLON;
-          insert_into_linked_list(head, retToken, this->num_tokens);
+          retToken = {Token::SEMICOLON, ";"};
+          this->process_token(head);
+          this->process_literal_token(retToken, head);
           i++;
-          read_next();
           break;
         default:
           // capture strings starting with double quotes
@@ -376,27 +343,28 @@ void Lexer::tokenize(std::unique_ptr<Token[]> &token_stack) {
               read_next();
               i++;
             }
-            retToken = (this->input[this->ptr] == '"') ? Token::STRING
-                                                       : Token::UNDEFINED;
+            if (this->input[this->ptr] == '"')
+              retToken = {Token::STRING, this->current_token};
+            else
+              retToken = {Token::UNDEFINED, this->current_token};
             insert_into_linked_list(head, retToken, this->num_tokens);
             this->current_token[0] = '\0';
             this->current_token_ptr = 0;
             i++;
             read_next();
-          } else if (this->current_char == '\'') { // single quotes
+          } else if (this->current_char == '\'') {
             if (this->input[this->ptr + 2] == '\'') {
-              this->current_token =
-                  this->input.substr(this->ptr, this->ptr + 2);
+              insert_into_linked_list(
+                  head,
+                  {Token::CHAR, std::string(1, this->input[this->ptr + 1])},
+                  this->num_tokens);
               read_next(3);
               i += 3;
-              insert_into_linked_list(head, Token::CHAR, this->num_tokens);
               this->current_token[0] = '\0';
               this->current_token_ptr = 0;
             } else {
               // error out since a char either too long or too short
-              std::cout << "Expected expression for char at line "
-                        << this->line_number << std::endl;
-              std::exit(-12);
+              throw std::runtime_error("Expected expression for char at line ");
             }
           } else [[likely]] {
             this->current_token[this->current_token_ptr] = this->current_char;
@@ -409,23 +377,23 @@ void Lexer::tokenize(std::unique_ptr<Token[]> &token_stack) {
       }
     }
   }
-  token_stack = std::make_unique<Token[]>(this->num_tokens + 1);
-  //  move the tokens from head to the token_stack
-  token_stack[this->num_tokens] = Token::END;
+  token_stack = std::make_unique<TokenChunk[]>(this->num_tokens + 2);
+  token_stack[0] = {Token::START, ""};
+  token_node *temp;
   for (int i = this->num_tokens - 1; i >= 0; i--) {
     if (head != nullptr) {
-      token_node *temp;
       temp = head;
-      token_stack[i] = (*head).tok;
+      token_stack[i + 1] = (*head).tok;
       head = head->next;
       delete temp;
     }
   }
   head = nullptr;
+  token_stack[this->num_tokens + 1] = {Token::END, ""};
 }
 
+// should not be called once EOF is reached
 void Lexer::read_next() noexcept {
-  // NOTE: should not be called once EOF is reached
   if (this->ptr >= this->len) {
     this->current_token[this->ptr] = '\0';
   }
@@ -434,8 +402,8 @@ void Lexer::read_next() noexcept {
   this->next_ptr += 1;
 }
 
+// overloaded method to avoid multiple function calls calling read()
 void Lexer::read_next(int count) noexcept {
-  // overloaded method to avoid multiple function calls
   if (count > 0) {
     if (this->ptr >= this->len) {
       this->current_token[this->ptr] = '\0';
@@ -446,26 +414,26 @@ void Lexer::read_next(int count) noexcept {
   }
 }
 
-Token Lexer::get_token() {
-  // NOTE: only called when char_stack has a length of atleast one
+// NOTE: only called when char_stack has a length of atleast one
+TokenChunk Lexer::get_token() {
   int i = 0;
   int token_len = this->current_token_ptr;
   while (std::isdigit(this->current_token[i])) {
     i++;
   }
   if (this->current_token[i] == '\0') {
-    return Token::INT;
+    return {Token::INT, std::stoi(this->current_token)};
   } else if (this->current_token[i] == '.') {
     while (std::isdigit(this->current_token[i])) {
       i++;
     }
     if (this->current_token[i] == '\0') {
-      return Token::DOUBLE;
+      return {Token::DOUBLE, std::stod(this->current_token)};
     }
   }
   if (i != 0) {
     // neither float nor string, but starts with a digit
-    return Token::INVALID;
+    return {Token::INVALID, "INVALID"};
   }
   Token retToken;
   State currentState{get_initial_state(this->current_token[i])};
@@ -473,7 +441,7 @@ Token Lexer::get_token() {
   // statement so the token is atleast two chars long
   while (i <= token_len) {
     switch (currentState) {
-    // ([a-z][A-z][0-9]|_)*
+      // ([a-z][A-z][0-9]|_)*
     case State::IDENTIFIER:
       retToken = Token::IDENTIFIER;
       while (i < token_len) {
@@ -528,6 +496,39 @@ Token Lexer::get_token() {
       } else {
         currentState = State::IDENTIFIER;
         // i++ handled in identifier case
+      }
+      break;
+    case State::ELSE_1:
+      if (this->current_token[i] == 'l') {
+        currentState = State::ELSE_2;
+        i++;
+      } else {
+        currentState = State::IDENTIFIER;
+      }
+      break;
+    case State::ELSE_2:
+      if (this->current_token[i] == 's') {
+        currentState = State::ELSE_3;
+        i++;
+      } else {
+        currentState = State::IDENTIFIER;
+      }
+      break;
+    case State::ELSE_3:
+      if (this->current_token[i] == 'e') {
+        currentState = State::ELSE_4;
+        i++;
+      } else {
+        currentState = State::IDENTIFIER;
+      }
+      break;
+    case State::ELSE_4:
+      if (this->current_token[i] == '\0') {
+        currentState = State::END;
+        retToken = Token::ELSE;
+        i--;
+      } else {
+        currentState = State::IDENTIFIER;
       }
       break;
     case State::INTK_2:
@@ -683,7 +684,7 @@ Token Lexer::get_token() {
     case State::FUNCTION_2:
       if (this->current_token[i] == '\0') {
         currentState = State::END;
-        retToken = Token::FUNCTION;
+        retToken = Token::FN;
         i--;
       } else {
         currentState = State::IDENTIFIER;
@@ -774,30 +775,35 @@ Token Lexer::get_token() {
         i--;
         retToken = Token::UNDEFINED;
         currentState = State::END;
-      }
-      break;
-    case State::NOT_1:
-      if (this->current_token[i] == '\0') {
-        currentState = State::END;
-        retToken = Token::NOT;
-      } else if (this->current_token[i] == '=') {
-        currentState = State::NOTEQUAL_2;
-        i++;
-      } else {
-        currentState = State::END;
-        retToken = Token::UNDEFINED;
+        break;
+      case State::EQUAL_2:
         i--;
+        currentState = State::END;
+        retToken = Token::EQUAL;
+        break;
+      case State::NOT_1:
+        if (this->current_token[i] == '\0') {
+          currentState = State::END;
+          retToken = Token::NOT;
+        } else if (this->current_token[i] == '=') {
+          currentState = State::NOTEQUAL_2;
+          i++;
+        } else {
+          currentState = State::END;
+          retToken = Token::UNDEFINED;
+          i--;
+        }
+        break;
+      case State::END:
+        if (retToken == Token::UNDEFINED) {
+          std::cerr << "Undefined behavior" << std::endl;
+          std::exit(-10);
+        }
+        return {retToken, this->current_token};
+        break;
+      default:
+        break;
       }
-      break;
-    case State::END:
-      if (retToken == Token::UNDEFINED) {
-        std::cerr << "Undefined behavior" << std::endl;
-        std::exit(-10);
-      }
-      return retToken;
-      break;
-    default:
-      break;
     }
   }
   std::cout << "Did not finish lexing " << std::endl;
