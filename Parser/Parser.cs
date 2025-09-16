@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Snip.Lexer;
 using Snip.AST;
 namespace Snip.Parser;
@@ -47,6 +48,7 @@ public class Parser
    private ExpressionNode ParseExpression(int precedence = 0)
    {
       var left = ParsePrefixExpression();
+
       
       while (true)
       {
@@ -79,7 +81,8 @@ public class Parser
          TokenType.LeftBracket => ParseArrayExpression(),
          TokenType.Plus => ParseUnaryExpression(),
          TokenType.Minus => ParseUnaryExpression(),
-         _ => throw new ParsingError($"Unexpected token: {token.Type}")
+         TokenType.RightParen => throw new ParsingError($"Expected expression inside parens"),
+         _ => throw new ParsingError($"ParsePrefixExpression: Unexpected token: {token.Type}")
       };
    }
 
@@ -143,6 +146,29 @@ public class Parser
 
       tok = _peek();
       if (tok is not { Type:  TokenType.Semicolon}) throw new ParsingError("Expected semicolon in assignment");
+      _next();
+      return node;
+   }
+
+   private StatementNode ParseReturnStatement()
+   {
+      var node = new ReturnStatementNode();
+      if (_peek() is not { Type: TokenType.Return })
+      {
+         throw new ParsingError("Expected return statement");
+      }
+
+      _next();
+      var tok = _peek();
+      if (tok is { Type: TokenType.Semicolon })
+      {
+         _next();
+         return node;
+      }
+      
+      node.Argument = ParseExpression();
+      
+      if (tok is not {Type: TokenType.Semicolon}) throw new ParsingError("Expected semicolon in return");
       _next();
       return node;
    }
@@ -253,19 +279,218 @@ public class Parser
       return new BooleanLiteralNode(tok.Value == "true");
    }
 
-   private StatementNode ParseStatement(Token tok)
+   private StatementNode? ParseNewLine()
+   {
+      var tok = _peek();
+      if (tok is not { Type: TokenType.Newline })
+      {
+         throw new ParsingError("Expected newline");
+      }
+      _next();
+      return null;
+   }
+   
+   
+   private StatementNode ParseContinueStatement()
+   {
+      var node =  new ContinueStatementNode();
+      var tok = _peek();
+      if (tok is not { Type: TokenType.Continue })
+      {
+         throw new ParsingError("Expected continue statement");
+      }
+      _next();
+      tok = _peek();
+      if (tok is not { Type: TokenType.Semicolon })
+      {
+         throw new ParsingError($"Continue: Expected semicolon, found {tok.Type}");
+      }
+      _next();
+      return node;
+   }
+
+   private IfStatementNode ParseIfStatement() {
+      var node = new IfStatementNode();
+      var tok = _peek();
+      if (tok is not { Type: TokenType.If })
+      {
+         throw new ParsingError("Expected if");
+      }
+      _next();
+      node.Condition = ParseExpression();
+      tok = _peek();
+      if (tok is not { Type: TokenType.LeftBrace })
+      {
+         throw new ParsingError("Expected {");
+      }
+      _next();
+      tok = _peek();
+      node.Consequence = new BlockStatementNode();
+      while (tok is not { Type: TokenType.RightBrace })
+      {
+         node.Consequence.Statements.Add(ParseStatement(tok));
+         tok = _peek();
+      }
+      _next();
+      tok = _peek();
+      if (tok is not { Type: TokenType.Else })
+      {
+         node.Alternative = null;
+         return node;
+      }
+      _next();
+      tok = _peek();
+      if (tok is not { Type: TokenType.LeftBrace })
+      {
+         throw new ParsingError("Expected {");
+      }
+      _next();
+      node.Alternative = new BlockStatementNode();
+      while (tok is not { Type: TokenType.RightBrace })
+      {
+         node.Alternative.Statements.Add(ParseStatement(tok));
+         tok = _peek();
+      }
+      _next();
+      return node;
+   }
+
+   private CaseNode ParseCase() {
+      var node = new CaseNode();
+      var tok = _peek();
+      if (tok is not { Type: TokenType.Case })
+      {
+         throw new ParsingError("Expected case");
+      }
+      _next();
+      node.Test = ParseExpression();
+      tok = _peek();
+      if (tok is not { Type: TokenType.LeftBrace })
+      {
+         throw new ParsingError("Expected {");
+      }
+      _next();
+      node.Consequent = new List<StatementNode>();
+      while (tok is not { Type: TokenType.RightBrace })
+      {
+         node.Consequent.Add(ParseStatement(tok));
+         tok = _peek();
+      }
+      _next();
+      return node;
+   }
+
+   private StatementNode ParseSwitchStatement() {
+      var node = new SwitchStatementNode(); 
+      var tok = _peek();
+      if (tok is not { Type: TokenType.Switch })
+      {
+         throw new ParsingError("Expected switch");
+      }
+      _next();
+      node.Expression = ParseExpression();
+      tok = _peek();
+      if (tok is not { Type: TokenType.LeftBrace })
+      {
+         throw new ParsingError("Expected {");
+      }
+      _next();
+      node.Cases = new List<CaseNode>();
+      while (tok is not { Type: TokenType.RightBrace })
+      {
+         var caseNode = ParseCase();
+         node.Cases.Add(caseNode);
+         tok = _peek();
+      }
+      _next();
+      tok = _peek();
+      if (tok is not { Type: TokenType.Default })
+      {
+         throw new ParsingError("Expected default");
+      }
+      _next();
+      node.DefaultCase = ParseCase();
+      tok = _peek();
+      if (tok is not { Type: TokenType.RightBrace })
+      {
+         throw new ParsingError("Expected }");
+      }
+      _next();
+      return node;
+   }
+
+   private StatementNode ParseWhileStatement() {
+      var node = new WhileStatementNode();
+      var tok = _peek();
+      if (tok is not { Type: TokenType.While })
+      {
+         throw new ParsingError("Expected while");
+      }
+      _next();
+      node.Condition = ParseExpression();
+      tok = _peek();
+      if (tok is not { Type: TokenType.LeftBrace })
+      {
+         throw new ParsingError("Expected {");
+      }
+      _next();
+      node.Body = new BlockStatementNode();
+      while (tok is not { Type: TokenType.RightBrace })
+      {
+         var statement = ParseStatement(tok);
+         if (statement is null)
+            throw new ParsingError("Expected statement");
+         node.Body.Statements.Add(statement);
+         tok = _peek();
+      }
+      _next();
+      return node;
+   }
+
+   private StatementNode ParseBreakStatement()
+   {
+      var node =  new BreakStatementNode();
+      var tok = _peek();
+      if (tok is not { Type: TokenType.Break })
+      {
+         throw new ParsingError("Expected break");
+      }
+
+      _next();
+      if (tok is not { Type: TokenType.Semicolon })
+      {
+         throw new ParsingError("Break: Expected semicolon");
+      }
+
+      _next();
+      return node;
+   }
+
+   private StatementNode? ParseSemicolon()
+   {
+      _next();
+      return null;
+   }
+
+   private StatementNode? ParseStatement(Token tok)
    {
       return tok.Type switch
       {
          TokenType.Let => ParseLetStatement(),
-         TokenType.EndOfFile => new EOF(),
+         TokenType.Return => ParseReturnStatement(),
+         TokenType.Newline => ParseNewLine(),
+         TokenType.Break => ParseBreakStatement(),
+         TokenType.Continue => ParseContinueStatement(),
+         TokenType.If => ParseIfStatement(),
+         TokenType.While => ParseWhileStatement(),
+         TokenType.Semicolon => ParseSemicolon(),
+         TokenType.Switch => ParseSwitchStatement(),
          _ => throw new Exception($"Unexpected token: {tok.Type}")
       };
    }
 
-   public ProgramNode parse()
+   public ProgramNode Parse()
    {
-      Console.WriteLine("Parsing program");
       var program = new ProgramNode();
       while (_peek() != null)
       {
@@ -275,10 +500,10 @@ public class Parser
             return program;
          }
          if (tok.Type == TokenType.EndOfFile) break;
-         var node = this.ParseStatement(tok);
+         var node = ParseStatement(tok);
+         if (node is null) continue; // handles new line
          program.Statements.Add(node);
       }
-      Console.WriteLine("Parsing program finished");
       return program;
    }
 

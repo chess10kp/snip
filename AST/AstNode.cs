@@ -53,7 +53,7 @@ public class IfStatementNode : StatementNode
 
 public class WhileStatementNode : StatementNode
 {
-    public required ExpressionNode Condition { get; set; }
+    public ExpressionNode Condition { get; set; }
     public BlockStatementNode Body { get; set; }
     public override string NodeType => "WhileStatement";
 }
@@ -258,9 +258,9 @@ public class PowerExpressionNode(ExpressionNode left, ExpressionNode right) : Ex
 
 public class AssignmentExpressionNode : ExpressionNode
 {
-    public ExpressionNode Left { get; set; }
-    public string Operator { get; set; }
-    public ExpressionNode Right { get; set; }
+    public ExpressionNode? Left { get; set; }
+    public string? Operator { get; set; }
+    public ExpressionNode? Right { get; set; }
     public override string NodeType => "AssignmentExpression";
 }
 
