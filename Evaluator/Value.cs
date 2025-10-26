@@ -72,6 +72,36 @@ public class ReturnValue
     }
 }
 
+public class BreakValue
+{
+    public Value Value { get; }
+
+    public BreakValue(Value value)
+    {
+        Value = value;
+    }
+}
+
+public class ContinueValue
+{
+    public Value Value { get; }
+
+    public ContinueValue(Value value)
+    {
+        Value = value;
+    }
+}
+
+public class ExceptionValue
+{
+    public Value Value { get; }
+
+    public ExceptionValue(Value value)
+    {
+        Value = value;
+    }
+}
+
 public enum ValueType
 {
     Integer,
@@ -85,7 +115,10 @@ public enum ValueType
     Function,
     Class,
     Instance,
-    Return
+    Return,
+    Break,
+    Continue,
+    Exception
 }
 
 public class Value
@@ -112,6 +145,9 @@ public class Value
     public static Value Class(ClassValue @class) => new(ValueType.Class, @class);
     public static Value Instance(ClassInstance instance) => new(ValueType.Instance, instance);
     public static Value Return(ReturnValue returnValue) => new(ValueType.Return, returnValue);
+    public static Value Break(BreakValue breakValue) => new(ValueType.Break, breakValue);
+    public static Value Continue(ContinueValue continueValue) => new(ValueType.Continue, continueValue);
+    public static Value Exception(ExceptionValue exceptionValue) => new(ValueType.Exception, exceptionValue);
 
     public override string ToString()
     {
@@ -128,6 +164,9 @@ public class Value
             ValueType.Function => "[Function]",
             ValueType.Class => $"[class {(ClassValue)Data!}]",
             ValueType.Instance => $"[object {(ClassInstance)Data!}]",
+            ValueType.Break => "[break]",
+            ValueType.Continue => "[continue]",
+            ValueType.Exception => $"[exception {(ExceptionValue)Data!}]",
             _ => "unknown"
         };
     }

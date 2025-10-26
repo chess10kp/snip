@@ -37,8 +37,10 @@ public class Evaluator
             ConditionalExpressionNode condExpr => EvalConditional(condExpr, env),
             BlockStatementNode blockStmt => EvalBlock(blockStmt, env),
              WhileStatementNode whileStmt => EvalWhile(whileStmt, env),
-             ForStatementNode forStmt => EvalFor(forStmt, env),
-             UnaryExpressionNode unaryExpr => EvalUnary(unaryExpr, env),
+              ForStatementNode forStmt => EvalFor(forStmt, env),
+              DoWhileStatementNode doWhileStmt => EvalDoWhile(doWhileStmt, env),
+              SwitchStatementNode switchStmt => EvalSwitch(switchStmt, env),
+              UnaryExpressionNode unaryExpr => EvalUnary(unaryExpr, env),
              CallExpressionNode callExpr => EvalCall(callExpr, env),
              NewExpressionNode newExpr => EvalNewExpression(newExpr, env),
              FunctionDeclarationNode funcDecl => EvalFunctionDeclaration(funcDecl, env),
@@ -46,8 +48,12 @@ public class Evaluator
              ClassDeclarationNode classDecl => EvalClassDeclaration(classDecl, env),
              ThisExpressionNode => EvalThisExpression(env),
              SuperExpressionNode => EvalSuperExpression(env),
-             ReturnStatementNode returnStmt => EvalReturn(returnStmt, env),
-             MemberExpressionNode memberExpr => EvalMember(memberExpr, env),
+               ReturnStatementNode returnStmt => EvalReturn(returnStmt, env),
+               BreakStatementNode breakStmt => EvalBreak(breakStmt, env),
+               ContinueStatementNode continueStmt => EvalContinue(continueStmt, env),
+               ThrowStatementNode throwStmt => EvalThrow(throwStmt, env),
+               TryStatementNode tryStmt => EvalTry(tryStmt, env),
+              MemberExpressionNode memberExpr => EvalMember(memberExpr, env),
              ObjectExpressionNode objExpr => EvalObject(objExpr, env),
              ArrayExpressionNode arrExpr => EvalArray(arrExpr, env),
              _ => throw new NotImplementedException($"Evaluation not implemented for {node.NodeType}")
@@ -156,6 +162,13 @@ public class Evaluator
 
     private bool ValuesEqual(Value left, Value right)
     {
+        // Handle numeric type coercion
+        if ((left.Type == ValueType.Integer || left.Type == ValueType.Float) &&
+            (right.Type == ValueType.Integer || right.Type == ValueType.Float))
+        {
+            return ToNumber(left) == ToNumber(right);
+        }
+
         if (left.Type != right.Type) return false;
 
         return left.Type switch
@@ -256,6 +269,11 @@ public class Evaluator
         foreach (var stmt in node.Statements)
         {
             result = Eval(stmt, env);
+            // If an exception is thrown at the top level, return it
+            if (result.Type == ValueType.Exception)
+            {
+                return result;
+            }
         }
         return result;
     }
@@ -323,6 +341,11 @@ public class Evaluator
         foreach (var stmt in node.Body)
         {
             result = Eval(stmt, blockEnv);
+            // If we encounter a control flow statement or exception, return it immediately
+            if (result.Type == ValueType.Return || result.Type == ValueType.Break || result.Type == ValueType.Continue || result.Type == ValueType.Exception)
+            {
+                return result;
+            }
         }
         return result;
     }
@@ -333,6 +356,18 @@ public class Evaluator
         while (IsTruthy(Eval(node.Condition, env)))
         {
             result = EvalBlock(node.Body, env);
+            if (result.Type == ValueType.Break)
+            {
+                break;
+            }
+            if (result.Type == ValueType.Continue)
+            {
+                continue;
+            }
+            if (result.Type == ValueType.Exception)
+            {
+                return result;
+            }
         }
         return result;
     }
@@ -352,11 +387,114 @@ public class Evaluator
         while (node.Condition == null || IsTruthy(Eval(node.Condition, loopEnv)))
         {
             result = EvalBlock(node.Body, loopEnv);
+            if (result.Type == ValueType.Break)
+            {
+                break;
+            }
+            if (result.Type == ValueType.Continue)
+            {
+                // Evaluate update before continuing
+                if (node.Update != null)
+                {
+                    Eval(node.Update, loopEnv);
+                }
+                continue;
+            }
+            if (result.Type == ValueType.Exception)
+            {
+                return result;
+            }
 
             // Evaluate update
             if (node.Update != null)
             {
                 Eval(node.Update, loopEnv);
+            }
+        }
+
+        return result;
+    }
+
+    private Value EvalDoWhile(DoWhileStatementNode node, Environment env)
+    {
+        Value result = Value.Undefined();
+        do
+        {
+            result = EvalBlock(node.Body, env);
+            if (result.Type == ValueType.Break)
+            {
+                break;
+            }
+            if (result.Type == ValueType.Continue)
+            {
+                continue;
+            }
+            if (result.Type == ValueType.Exception)
+            {
+                return result;
+            }
+        } while (IsTruthy(Eval(node.Condition, env)));
+        return result;
+    }
+
+    private Value EvalSwitch(SwitchStatementNode node, Environment env)
+    {
+        var switchValue = Eval(node.Expression, env);
+        Value result = Value.Undefined();
+        bool matched = false;
+        bool executing = false;
+        bool broke = false;
+
+        foreach (var caseNode in node.Cases)
+        {
+            if (!matched && caseNode.Test != null && ValuesEqual(Eval(caseNode.Test, env), switchValue))
+            {
+                matched = true;
+                executing = true;
+            }
+            if (executing)
+            {
+                foreach (var stmt in caseNode.Consequent)
+                {
+                    var stmtResult = Eval(stmt, env);
+                    if (stmtResult.Type == ValueType.Return)
+                    {
+                        return stmtResult;
+                    }
+                    if (stmtResult.Type == ValueType.Break)
+                    {
+                        broke = true;
+                        break;
+                    }
+                    if (stmtResult.Type == ValueType.Exception)
+                    {
+                        return stmtResult;
+                    }
+                    result = stmtResult;
+                }
+                if (broke) break;
+            }
+        }
+
+        if (!matched && node.DefaultCase != null && !broke)
+        {
+            foreach (var stmt in node.DefaultCase.Consequent)
+            {
+                var stmtResult = Eval(stmt, env);
+                if (stmtResult.Type == ValueType.Return)
+                {
+                    return stmtResult;
+                }
+                if (stmtResult.Type == ValueType.Break)
+                {
+                    broke = true;
+                    break;
+                }
+                if (stmtResult.Type == ValueType.Exception)
+                {
+                    return stmtResult;
+                }
+                result = stmtResult;
             }
         }
 
@@ -571,6 +709,16 @@ public class Evaluator
     {
         var value = node.Value != null ? Eval(node.Value, env) : Value.Undefined();
         return Value.Return(new ReturnValue(value));
+    }
+
+    private Value EvalBreak(BreakStatementNode node, Environment env)
+    {
+        return Value.Break(new BreakValue(Value.Undefined()));
+    }
+
+    private Value EvalContinue(ContinueStatementNode node, Environment env)
+    {
+        return Value.Continue(new ContinueValue(Value.Undefined()));
     }
 
     private Value EvalMember(MemberExpressionNode node, Environment env)
@@ -807,5 +955,48 @@ public class Evaluator
             }
         }
         return Value.Array(elements);
+    }
+
+    private Value EvalThrow(ThrowStatementNode node, Environment env)
+    {
+        var exceptionValue = Eval(node.Argument, env);
+        return Value.Exception(new ExceptionValue(exceptionValue));
+    }
+
+    private Value EvalTry(TryStatementNode node, Environment env)
+    {
+        // Execute the try block
+        Value result = EvalBlock(node.Block, env);
+
+        // Check if an exception was thrown in the try block
+        if (result.Type == ValueType.Exception)
+        {
+            var exceptionValue = (ExceptionValue)result.Data!;
+
+            // If we have a catch handler
+            if (node.Handler != null)
+            {
+                var catchEnv = new Environment(env);
+                if (node.Handler.Parameter != null)
+                {
+                    // Bind the exception to the catch parameter
+                    catchEnv.Define(node.Handler.Parameter.Name, exceptionValue.Value);
+                }
+                result = EvalBlock(node.Handler.Body, catchEnv);
+            }
+            else
+            {
+                // Re-throw the exception if no catch handler
+                return result;
+            }
+        }
+
+        // Execute finally block if present
+        if (node.Finalizer != null)
+        {
+            EvalBlock(node.Finalizer, env);
+        }
+
+        return result;
     }
 }

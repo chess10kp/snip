@@ -357,6 +357,22 @@ public class EvaluatorTests
     }
 
     [Fact]
+    public void EvalWhileLoop_WithContinue_ShouldSkipIteration()
+    {
+        var result = Evaluate("let x = 0; let sum = 0; while (x < 5) { x = x + 1; if (x == 3) { continue; } sum = sum + x; } sum;");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(12.0, result.Data); // 1+2+4+5 = 12 (skips 3)
+    }
+
+    [Fact]
+    public void EvalForLoop_WithContinue_ShouldSkipIteration()
+    {
+        var result = Evaluate("let sum = 0; for (let i = 0; i < 5; i = i + 1) { if (i == 2) { continue; } sum = sum + i; } sum;");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type); // Addition returns float
+        Assert.Equal(8.0, result.Data); // 0+1+3+4 = 8 (skips 2)
+    }
+
+    [Fact]
     public void EvalUnaryNotOperator_ShouldNegateBoolean()
     {
         var result = Evaluate("!true;");
@@ -476,5 +492,126 @@ public class EvaluatorTests
         var result = Evaluate("class Animal { species = \"animal\"; } class Dog extends Animal { getSpecies() { return super.species; } } let d = new Dog(); d.getSpecies();");
         Assert.Equal(Snip.Evaluator.ValueType.String, result.Type);
         Assert.Equal("animal", result.Data);
+    }
+
+    [Fact]
+    public void EvalSwitchStatement_ShouldExecuteMatchingCase()
+    {
+        var result = Evaluate("let x = 1; switch (x) { case 1: 42; break; case 2: 24; break; }");
+        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
+        Assert.Equal(42L, result.Data);
+    }
+
+    [Fact]
+    public void EvalSwitchStatement_ShouldFallThroughCases()
+    {
+        var result = Evaluate("let x = 2; switch (x) { case 1: 10; case 2: 20; case 3: 30; break; }");
+        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
+        Assert.Equal(30L, result.Data);
+    }
+
+    [Fact]
+    public void EvalSwitchStatement_ShouldExecuteDefaultWhenNoMatch()
+    {
+        var result = Evaluate("let x = 5; switch (x) { case 1: 10; break; case 2: 20; break; default: 99; }");
+        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
+        Assert.Equal(99L, result.Data);
+    }
+
+    [Fact]
+    public void EvalSwitchStatement_ShouldReturnUndefinedIfNoMatchAndNoDefault()
+    {
+        var result = Evaluate("let x = 5; switch (x) { case 1: 10; break; case 2: 20; break; }");
+        Assert.Equal(Snip.Evaluator.ValueType.Undefined, result.Type);
+    }
+
+    [Fact]
+    public void EvalDoWhileLoop_ShouldExecuteAtLeastOnce()
+    {
+        var result = Evaluate("let x = 0; do { x = 42; } while (false); x;");
+        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
+        Assert.Equal(42L, result.Data);
+    }
+
+    [Fact]
+    public void EvalDoWhileLoop_ShouldExecuteMultipleTimes()
+    {
+        var result = Evaluate("let x = 0; do { x = x + 1; } while (x < 3); x;");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(3.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalDoWhileLoop_ShouldHandleBreak()
+    {
+        var result = Evaluate("let x = 0; do { x = x + 1; if (x == 2) { break; } } while (x < 10); x;");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(2.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalDoWhileLoop_ShouldHandleContinue()
+    {
+        var result = Evaluate("let x = 0; let sum = 0; do { x = x + 1; if (x == 2) { continue; } sum = sum + x; } while (x < 4); sum;");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(8.0, result.Data); // 1 + 3 + 4 (skips sum for x=2)
+    }
+
+    [Fact]
+    public void EvalThrowStatement_ShouldCreateExceptionValue()
+    {
+        var result = Evaluate("throw \"error message\";");
+        Assert.Equal(Snip.Evaluator.ValueType.Exception, result.Type);
+        var exceptionValue = (Snip.Evaluator.ExceptionValue)result.Data!;
+        Assert.Equal(Snip.Evaluator.ValueType.String, exceptionValue.Value.Type);
+        Assert.Equal("error message", exceptionValue.Value.Data);
+    }
+
+    [Fact]
+    public void EvalTryCatch_ShouldCatchException()
+    {
+        var result = Evaluate("try { throw \"error\"; } catch (e) { e; }");
+        Assert.Equal(Snip.Evaluator.ValueType.String, result.Type);
+        Assert.Equal("error", result.Data);
+    }
+
+    [Fact]
+    public void EvalTryCatch_ShouldExecuteTryBlockNormally()
+    {
+        var result = Evaluate("try { 42; } catch (e) { \"caught\"; }");
+        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
+        Assert.Equal(42L, result.Data);
+    }
+
+    [Fact]
+    public void EvalTryFinally_ShouldExecuteFinallyBlock()
+    {
+        var result = Evaluate("let x = 0; try { x = 42; } finally { x = x + 1; } x;");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(43.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalTryCatchFinally_ShouldExecuteBothCatchAndFinally()
+    {
+        var result = Evaluate("let x = 0; try { throw \"error\"; x = 1; } catch (e) { x = 2; } finally { x = x + 10; } x;");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(12.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalTryCatchFinally_ShouldExecuteFinallyAfterNormalTry()
+    {
+        var result = Evaluate("let x = 0; try { x = 5; } catch (e) { x = 10; } finally { x = x * 2; } x;");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(10.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalNestedTryCatch_ShouldHandleNestedExceptions()
+    {
+        var result = Evaluate("try { try { throw \"inner\"; } catch (e) { throw \"outer\"; } } catch (e) { e; }");
+        Assert.Equal(Snip.Evaluator.ValueType.String, result.Type);
+        Assert.Equal("outer", result.Data);
     }
 }

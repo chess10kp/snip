@@ -933,10 +933,68 @@ node.Value = ParseExpression();
                node.Alternative.Body.Add(statement);
         }
       _next();
-      return node;
-   }
+        return node;
+    }
 
-private CaseNode ParseCase(bool isDefault = false) {
+    private TryStatementNode ParseTryStatement()
+    {
+        var node = new TryStatementNode();
+        var tok = _peek();
+        if (tok is not { Type: TokenType.Try })
+            throw new ParsingError("Expected try");
+
+        _next(); // consume 'try'
+
+        // Parse try block
+        node.Block = (BlockStatementNode)ParseBlockStatement();
+
+        // Parse optional catch clause
+        tok = _peek();
+        if (tok is { Type: TokenType.Catch })
+        {
+            _next(); // consume 'catch'
+            node.Handler = ParseCatchClause();
+        }
+
+        // Parse optional finally clause
+        tok = _peek();
+        if (tok is { Type: TokenType.Finally })
+        {
+            _next(); // consume 'finally'
+            node.Finalizer = (BlockStatementNode)ParseBlockStatement();
+        }
+
+        return node;
+    }
+
+    private CatchClauseNode ParseCatchClause()
+    {
+        var node = new CatchClauseNode();
+
+        // Check for optional parameter
+        var tok = _peek();
+        if (tok is { Type: TokenType.LeftParen })
+        {
+            _next(); // consume '('
+            tok = _peek();
+            if (tok is { Type: TokenType.Identifier })
+            {
+                node.Parameter = new IdentifierNode(tok.Value);
+                _next(); // consume identifier
+            }
+            tok = _peek();
+            if (tok is not { Type: TokenType.RightParen })
+                throw new ParsingError("Expected ) after catch parameter");
+            _next(); // consume ')'
+        }
+
+        // Parse catch block
+        node.Body = (BlockStatementNode)ParseBlockStatement();
+
+        return node;
+    }
+
+ private CaseNode ParseCase(bool isDefault = false) {
         var node = new CaseNode();
         var tok = _peek();
         if (!isDefault)
@@ -1221,19 +1279,20 @@ node.Cases = new List<CaseNode>();
           throw new ParsingError("Expected {");
        }
 
-       _next(); // Consume '{'
-       
-       // Check if this looks like an object expression by looking ahead
-       var nextTok = _peek();
-       if (nextTok is { Type: TokenType.String } || nextTok is { Type: TokenType.RightBrace })
-       {
-          // This looks like an object expression, fall back to expression parsing
-          // Put the token back so ParseExpressionStatement can handle it properly
-          _ptr--;
-          return ParseExpressionStatement();
-       }
-       
-       var node = new BlockStatementNode();
+        _next(); // Consume '{'
+
+        // Check if this looks like an object expression by looking ahead
+        var nextTok = _peek();
+        if (nextTok is { Type: TokenType.RightBrace } ||
+            (nextTok is { Type: TokenType.String } && _peek(1)?.Type == TokenType.Colon))
+        {
+           // This looks like an object expression, fall back to expression parsing
+           // Put the token back so ParseExpressionStatement can handle it properly
+           _ptr--;
+           return ParseExpressionStatement();
+        }
+
+        var node = new BlockStatementNode();
        
        while ((_peek() is { Type: not TokenType.RightBrace }) && _peek() != null)
        {
@@ -1273,8 +1332,9 @@ node.Cases = new List<CaseNode>();
            TokenType.Class => ParseClassDeclaration(),
           TokenType.For => ParseForStatement(),
           TokenType.Do => ParseDoWhileStatement(),
-          TokenType.Throw => ParseThrowStatement(),
-          TokenType.Return => ParseReturnStatement(),
+           TokenType.Throw => ParseThrowStatement(),
+           TokenType.Try => ParseTryStatement(),
+           TokenType.Return => ParseReturnStatement(),
           TokenType.Newline => ParseNewLine(),
           TokenType.Break => ParseBreakStatement(),
           TokenType.Continue => ParseContinueStatement(),
