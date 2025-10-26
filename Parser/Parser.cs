@@ -301,6 +301,10 @@ public class Parser
       }
       _next();
       tok = _peek();
+      if (tok is null)
+      {
+         throw new ParsingError("Continue: Expected semicolon, found end of input");
+      }
       if (tok is not { Type: TokenType.Semicolon })
       {
          throw new ParsingError($"Continue: Expected semicolon, found {tok.Type}");
@@ -328,6 +332,9 @@ public class Parser
       node.Consequence = new BlockStatementNode();
       while (tok is not { Type: TokenType.RightBrace })
       {
+        if (tok == null)
+            throw new ParsingError("Expected }");
+
          node.Consequence.Statements.Add(ParseStatement(tok));
          tok = _peek();
       }
@@ -435,7 +442,7 @@ public class Parser
       }
       _next();
       node.Body = new BlockStatementNode();
-      while (tok is not { Type: TokenType.RightBrace })
+      while (tok is not { Type: TokenType.RightBrace } && tok is not null)
       {
          var statement = ParseStatement(tok);
          if (statement is null)
@@ -485,8 +492,21 @@ public class Parser
          TokenType.While => ParseWhileStatement(),
          TokenType.Semicolon => ParseSemicolon(),
          TokenType.Switch => ParseSwitchStatement(),
-         _ => throw new Exception($"Unexpected token: {tok.Type}")
+         _ => ParseExpressionStatement()
       };
+   }
+
+   private ExpressionStatementNode ParseExpressionStatement()
+   {
+       var expression = ParseExpression();
+       var node = new ExpressionStatementNode { Expression = expression };
+
+       if (_peek()?.Type == TokenType.Semicolon)
+       {
+           _next();
+       }
+
+       return node;
    }
 
    public ProgramNode Parse()
