@@ -614,4 +614,51 @@ public class EvaluatorTests
         Assert.Equal(Snip.Evaluator.ValueType.String, result.Type);
         Assert.Equal("outer", result.Data);
     }
+
+    [Fact]
+    public void EvalArrowFunctionExpression_ShouldReturnFunction()
+    {
+        var result = Evaluate("let add = (a, b) => a + b; add;");
+        Assert.Equal(Snip.Evaluator.ValueType.Function, result.Type);
+    }
+
+    [Fact]
+    public void EvalArrowFunctionCall_ShouldExecuteFunction()
+    {
+        var result = Evaluate("let add = (a, b) => a + b; add(2, 3);");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(5.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalArrowFunctionWithBlockBody_ShouldExecuteBlock()
+    {
+        var result = Evaluate("let test = (x) => { return x * 2; }; test(5);");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(10.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalArrowFunctionSingleParam_ShouldWork()
+    {
+        var result = Evaluate("let square = x => x * x; square(4);");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(16.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalArrowFunctionNoParams_ShouldWork()
+    {
+        var result = Evaluate("let get42 = () => 42; get42();");
+        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
+        Assert.Equal(42L, result.Data);
+    }
+
+    [Fact]
+    public void EvalArrowFunctionClosure_ShouldCaptureEnvironment()
+    {
+        var result = Evaluate("let multiplier = 2; let multiply = x => x * multiplier; multiply(5);");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(10.0, result.Data);
+    }
 }

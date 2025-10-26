@@ -44,8 +44,9 @@ public class Evaluator
              CallExpressionNode callExpr => EvalCall(callExpr, env),
              NewExpressionNode newExpr => EvalNewExpression(newExpr, env),
              FunctionDeclarationNode funcDecl => EvalFunctionDeclaration(funcDecl, env),
-             FunctionExpressionNode funcExpr => Value.Function(new FunctionValue(funcExpr.Parameters, funcExpr.Body, env)),
-             ClassDeclarationNode classDecl => EvalClassDeclaration(classDecl, env),
+              FunctionExpressionNode funcExpr => Value.Function(new FunctionValue(funcExpr.Parameters, funcExpr.Body, env)),
+              ArrowFunctionExpressionNode arrowFuncExpr => EvalArrowFunction(arrowFuncExpr, env),
+              ClassDeclarationNode classDecl => EvalClassDeclaration(classDecl, env),
              ThisExpressionNode => EvalThisExpression(env),
              SuperExpressionNode => EvalSuperExpression(env),
                ReturnStatementNode returnStmt => EvalReturn(returnStmt, env),
@@ -646,6 +647,24 @@ public class Evaluator
         var function = new FunctionValue(node.Parameters, node.Body, env);
         env.Define(node.Name.Name, Value.Function(function));
         return Value.Undefined();
+    }
+
+    private Value EvalArrowFunction(ArrowFunctionExpressionNode node, Environment env)
+    {
+        BlockStatementNode body;
+        if (node.Body is ExpressionNode expr)
+        {
+            // Wrap expression in a return statement
+            var returnStmt = new ReturnStatementNode { Value = expr };
+            body = new BlockStatementNode { Body = [returnStmt] };
+        }
+        else
+        {
+            body = (BlockStatementNode)node.Body;
+        }
+
+        var function = new FunctionValue(node.Parameters, body, env);
+        return Value.Function(function);
     }
 
     private Value EvalClassDeclaration(ClassDeclarationNode node, Environment env)

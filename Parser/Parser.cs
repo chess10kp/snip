@@ -61,30 +61,49 @@ public class Parser
       return _precedence.TryGetValue(tokenType, out var precedence) ? precedence : 0;
    }
 
-   // Main Pratt parser entry point
-   private ExpressionNode ParseExpression(int precedence = 0)
-   {
-      var left = ParsePrefixExpression();
+    // Main Pratt parser entry point
+    private ExpressionNode ParseExpression(int precedence = 0)
+    {
+       var left = ParsePrefixExpression();
 
-      
-       while (true)
+       // Check for arrow function: identifier => ...
+       if (left is IdentifierNode ident && _peek()?.Type == TokenType.Arrow)
        {
-          var currentToken = _peek();
-          if (currentToken == null) break;
-          
-// Semicolon, RightParen, LeftBrace, Colon, Comma, RightBracket, and RightBrace are not operators, they terminate expressions
-           if (currentToken.Type == TokenType.Semicolon || currentToken.Type == TokenType.RightParen || currentToken.Type == TokenType.LeftBrace || currentToken.Type == TokenType.Colon || currentToken.Type == TokenType.Comma || currentToken.Type == TokenType.RightBracket || currentToken.Type == TokenType.RightBrace || currentToken.Type == TokenType.Newline) break;
-           
-           var currentPrecedence = GetPrecedence(currentToken.Type);
-          // For right-associative operators (like assignment), use < instead of <=
-          // This allows operators with same precedence to be processed
-          if (currentPrecedence < precedence) break;
-          
-          left = ParseInfixExpression(left, currentToken.Type);
+           _next(); // consume =>
+           AstNode body;
+           if (_peek()?.Type == TokenType.LeftBrace)
+           {
+               body = ParseBlockStatement();
+           }
+           else
+           {
+               body = ParseExpression();
+           }
+           return new ArrowFunctionExpressionNode
+           {
+               Parameters = [new ParameterNode { Name = ident }],
+               Body = body
+           };
        }
-      
-      return left;
-   }
+
+        while (true)
+        {
+           var currentToken = _peek();
+           if (currentToken == null) break;
+
+// Semicolon, RightParen, LeftBrace, Colon, Comma, RightBracket, and RightBrace are not operators, they terminate expressions
+            if (currentToken.Type == TokenType.Semicolon || currentToken.Type == TokenType.RightParen || currentToken.Type == TokenType.LeftBrace || currentToken.Type == TokenType.Colon || currentToken.Type == TokenType.Comma || currentToken.Type == TokenType.RightBracket || currentToken.Type == TokenType.RightBrace || currentToken.Type == TokenType.Newline) break;
+
+            var currentPrecedence = GetPrecedence(currentToken.Type);
+           // For right-associative operators (like assignment), use < instead of <=
+           // This allows operators with same precedence to be processed
+           if (currentPrecedence < precedence) break;
+
+           left = ParseInfixExpression(left, currentToken.Type);
+        }
+
+       return left;
+    }
 
     private ExpressionNode ParsePrefixExpression()
     {
