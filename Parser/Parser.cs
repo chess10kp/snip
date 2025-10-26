@@ -18,15 +18,21 @@ public class Parser
         { TokenType.MultiplyAssign, 0 }, // Compound assignment
         { TokenType.DivideAssign, 0 }, // Compound assignment
         { TokenType.ModuloAssign, 0 }, // Compound assignment
-        { TokenType.Plus, 1 },
-        { TokenType.Minus, 1 },
-        { TokenType.Multiply, 2 },
-        { TokenType.Divide, 2 },
-        { TokenType.Modulo, 2 },
-        { TokenType.Power, 3 },
-        { TokenType.LeftParen, 4 }, // Function calls
-        { TokenType.Dot, 4 }, // Member access
-     };
+{ TokenType.Plus, 1 },
+         { TokenType.Minus, 1 },
+         { TokenType.Multiply, 2 },
+         { TokenType.Divide, 2 },
+         { TokenType.Modulo, 2 },
+         { TokenType.Power, 3 },
+         { TokenType.LeftParen, 4 }, // Function calls
+         { TokenType.Dot, 4 }, // Member access
+         { TokenType.Equal, 5 },
+         { TokenType.NotEqual, 5 },
+         { TokenType.LessThan, 6 },
+         { TokenType.LessThanOrEqual, 6 },
+         { TokenType.GreaterThan, 6 },
+         { TokenType.GreaterThanOrEqual, 6 },
+      };
 
    public Parser(Lexer.Lexer lexer)
    {
@@ -63,8 +69,8 @@ public class Parser
           var currentToken = _peek();
           if (currentToken == null) break;
           
-// Semicolon, RightParen, LeftBrace, and Colon are not operators, they terminate expressions
-           if (currentToken.Type == TokenType.Semicolon || currentToken.Type == TokenType.RightParen || currentToken.Type == TokenType.LeftBrace || currentToken.Type == TokenType.Colon) break;
+// Semicolon, RightParen, LeftBrace, Colon, Comma, RightBracket, and RightBrace are not operators, they terminate expressions
+           if (currentToken.Type == TokenType.Semicolon || currentToken.Type == TokenType.RightParen || currentToken.Type == TokenType.LeftBrace || currentToken.Type == TokenType.Colon || currentToken.Type == TokenType.Comma || currentToken.Type == TokenType.RightBracket || currentToken.Type == TokenType.RightBrace || currentToken.Type == TokenType.Newline) break;
            
            var currentPrecedence = GetPrecedence(currentToken.Type);
           // For right-associative operators (like assignment), use < instead of <=
@@ -115,9 +121,15 @@ public class Parser
            TokenType.Multiply => ParseBinaryExpression(left, operatorType),
            TokenType.Divide => ParseBinaryExpression(left, operatorType),
            TokenType.Modulo => ParseBinaryExpression(left, operatorType),
-           TokenType.Power => ParseBinaryExpression(left, operatorType),
-           TokenType.LeftParen => ParseCallExpression(left),
-           TokenType.Dot => ParseMemberExpression(left),
+TokenType.Power => ParseBinaryExpression(left, operatorType),
+            TokenType.Equal => ParseBinaryExpression(left, operatorType),
+            TokenType.NotEqual => ParseBinaryExpression(left, operatorType),
+            TokenType.GreaterThan => ParseBinaryExpression(left, operatorType),
+            TokenType.LessThan => ParseBinaryExpression(left, operatorType),
+            TokenType.LessThanOrEqual => ParseBinaryExpression(left, operatorType),
+            TokenType.GreaterThanOrEqual => ParseBinaryExpression(left, operatorType),
+            TokenType.LeftParen => ParseCallExpression(left),
+            TokenType.Dot => ParseMemberExpression(left),
            _ => throw new ParsingError($"Unexpected infix operator: {operatorType}")
         };
      }
@@ -129,12 +141,23 @@ public class Parser
         var precedence = GetPrecedence(operatorType);
         var right = ParseExpression(precedence);
         
-        return new AssignmentExpressionNode
-        {
-           Left = left,
-           Operator = operatorType.ToString(),
-           Right = right
-        };
+var operatorString = operatorType switch
+         {
+            TokenType.Assign => "=",
+            TokenType.PlusAssign => "+=",
+            TokenType.MinusAssign => "-=",
+            TokenType.MultiplyAssign => "*=",
+            TokenType.DivideAssign => "/=",
+            TokenType.ModuloAssign => "%=",
+            _ => operatorType.ToString()
+         };
+         
+         return new AssignmentExpressionNode
+         {
+            Left = left,
+            Operator = operatorString,
+            Right = right
+         };
      }
 
      private ExpressionNode ParseBinaryExpression(ExpressionNode left, TokenType operatorType)
@@ -144,16 +167,22 @@ public class Parser
        var precedence = GetPrecedence(operatorType);
        var right = ParseExpression(precedence);
        
-       return operatorType switch
-       {
-          TokenType.Plus => new AddExpressionNode(left, right),
-          TokenType.Minus => new SubtractExpressionNode(left, right),
-          TokenType.Multiply => new MultiplyExpressionNode(left, right),
-          TokenType.Divide => new DivideExpressionNode(left, right),
-          TokenType.Modulo => new ModuloExpressionNode(left, right),
-          TokenType.Power => new PowerExpressionNode(left, right),
-          _ => throw new ParsingError($"Unexpected binary operator: {operatorType}")
-       };
+return operatorType switch
+        {
+           TokenType.Plus => new AddExpressionNode(left, right),
+           TokenType.Minus => new SubtractExpressionNode(left, right),
+           TokenType.Multiply => new MultiplyExpressionNode(left, right),
+           TokenType.Divide => new DivideExpressionNode(left, right),
+           TokenType.Modulo => new ModuloExpressionNode(left, right),
+           TokenType.Power => new PowerExpressionNode(left, right),
+TokenType.Equal => new EqualExpressionNode(left, right),
+             TokenType.NotEqual => new NotEqualExpressionNode(left, right),
+             TokenType.GreaterThan => new GreaterThanExpressionNode(left, right),
+             TokenType.LessThan => new LessThanExpressionNode(left, right),
+             TokenType.LessThanOrEqual => new LessThanOrEqualExpressionNode(left, right),
+             TokenType.GreaterThanOrEqual => new GreaterThanOrEqualExpressionNode(left, right),
+           _ => throw new ParsingError($"Unexpected binary operator: {operatorType}")
+        };
     }
 
     private ExpressionNode ParseCallExpression(ExpressionNode callee)
@@ -263,10 +292,10 @@ public class Parser
          return node;
       }
       
-      node.Argument = ParseExpression();
-      
-      if (tok is not {Type: TokenType.Semicolon}) throw new ParsingError("Expected semicolon in return");
-      _next();
+node.Value = ParseExpression();
+       
+       if (_peek() is not {Type: TokenType.Semicolon}) throw new ParsingError("Expected semicolon in return");
+       _next();
       return node;
    }
 
@@ -463,14 +492,14 @@ public class Parser
       _next();
       tok = _peek();
       node.Consequence = new BlockStatementNode();
-      while (tok is not { Type: TokenType.RightBrace })
-      {
-        if (tok == null)
-            throw new ParsingError("Expected }");
+while (_peek() is not { Type: TokenType.RightBrace })
+       {
+         var currentTok = _peek();
+         if (currentTok == null)
+             throw new ParsingError("Expected }");
 
-         node.Consequence.Statements.Add(ParseStatement(tok));
-         tok = _peek();
-      }
+         node.Consequence.Body.Add(ParseStatement(currentTok));
+       }
       _next();
       tok = _peek();
       if (tok is not { Type: TokenType.Else })
@@ -486,30 +515,49 @@ public class Parser
       }
       _next();
       node.Alternative = new BlockStatementNode();
-      while (tok is not { Type: TokenType.RightBrace })
-      {
-         node.Alternative.Statements.Add(ParseStatement(tok));
-         tok = _peek();
-      }
+while (_peek() is not { Type: TokenType.RightBrace })
+       {
+          var currentTok = _peek();
+          if (currentTok == null) break;
+          node.Alternative.Body.Add(ParseStatement(currentTok));
+       }
       _next();
       return node;
    }
 
-private CaseNode ParseCase() {
-       var node = new CaseNode();
-       var tok = _peek();
-       if (tok is not { Type: TokenType.Case })
-       {
-          throw new ParsingError("Expected case");
-       }
-       _next();
-       node.Test = ParseExpression();
-       tok = _peek();
-       if (tok is not { Type: TokenType.Colon })
-       {
-          throw new ParsingError("Expected :");
-       }
-       _next();
+private CaseNode ParseCase(bool isDefault = false) {
+        var node = new CaseNode();
+        var tok = _peek();
+        if (!isDefault)
+        {
+            if (tok is not { Type: TokenType.Case })
+            {
+               throw new ParsingError("Expected case");
+            }
+            _next();
+            node.Test = ParseExpression();
+            tok = _peek();
+            if (tok is not { Type: TokenType.Colon })
+            {
+               throw new ParsingError("Expected :");
+            }
+            _next();
+        }
+        else
+        {
+            // For default case, we should be on the Default token
+            if (tok is not { Type: TokenType.Default })
+            {
+               throw new ParsingError("Expected default");
+            }
+            _next();
+            tok = _peek();
+            if (tok is not { Type: TokenType.Colon })
+            {
+               throw new ParsingError("Expected : after default");
+            }
+            _next();
+        }
        node.Consequent = new List<StatementNode>();
        
        // Parse statements until we hit another case, default, or right brace
@@ -544,43 +592,42 @@ private CaseNode ParseCase() {
       }
       _next();
 node.Cases = new List<CaseNode>();
-       while ((tok = _peek()) != null && tok.Type != TokenType.RightBrace)
-       {
-          // Skip whitespace and newlines
-          if (tok.Type == TokenType.Newline || tok.Type == TokenType.Whitespace)
-          {
-             _next();
-             continue;
-          }
-          
-          if (tok.Type == TokenType.Case)
-          {
-             var caseNode = ParseCase();
-             node.Cases.Add(caseNode);
-          }
-          else if (tok.Type == TokenType.Default)
-          {
-             break; // Let the default case handling deal with this
-          }
-          else
-          {
-             throw new ParsingError($"Expected case or default in switch, got {tok.Type}");
-          }
-          tok = _peek();
-       }
-_next();
-       tok = _peek();
-       if (tok is { Type: TokenType.Default })
-       {
-          _next();
-          node.DefaultCase = ParseCase();
-          tok = _peek();
-          if (tok is not { Type: TokenType.RightBrace })
-          {
-             throw new ParsingError("Expected }");
-          }
-       }
-      _next();
+        while ((tok = _peek()) != null && tok.Type != TokenType.RightBrace)
+        {
+           // Skip whitespace and newlines
+           if (tok.Type == TokenType.Newline || tok.Type == TokenType.Whitespace)
+           {
+              _next();
+              continue;
+           }
+           
+           if (tok.Type == TokenType.Case)
+           {
+              var caseNode = ParseCase();
+              node.Cases.Add(caseNode);
+           }
+           else if (tok.Type == TokenType.Default)
+           {
+              node.DefaultCase = ParseCase(isDefault: true);
+              tok = _peek();
+              if (tok is not { Type: TokenType.RightBrace })
+              {
+                  throw new ParsingError("Expected } after default case");
+              }
+              break; // Exit the loop after handling default
+           }
+           else
+           {
+              throw new ParsingError($"Expected case or default in switch, got {tok.Type}");
+           }
+           tok = _peek();
+        }
+        
+        // Consume the final RightBrace
+        if (_peek()?.Type == TokenType.RightBrace)
+        {
+           _next();
+        }
       return node;
    }
 
@@ -605,31 +652,74 @@ _next();
          var statement = ParseStatement(tok);
          if (statement is null)
             throw new ParsingError("Expected statement");
-         node.Body.Statements.Add(statement);
+         node.Body.Body.Add(statement);
          tok = _peek();
       }
       _next();
       return node;
    }
 
-   private StatementNode ParseBreakStatement()
-   {
-      var node =  new BreakStatementNode();
-      var tok = _peek();
-      if (tok is not { Type: TokenType.Break })
-      {
-         throw new ParsingError("Expected break");
-      }
+private StatementNode ParseBreakStatement()
+    {
+       var node =  new BreakStatementNode();
+       var tok = _peek();
+       if (tok is not { Type: TokenType.Break })
+       {
+          throw new ParsingError("Expected break");
+       }
 
-      _next();
-      if (tok is not { Type: TokenType.Semicolon })
-      {
-         throw new ParsingError("Break: Expected semicolon");
-      }
+       _next();
+       if (_peek() is not { Type: TokenType.Semicolon })
+       {
+          throw new ParsingError("Break: Expected semicolon");
+       }
 
-      _next();
-      return node;
-   }
+       _next();
+       return node;
+    }
+
+    private StatementNode ParseBlockStatement()
+    {
+       var tok = _peek();
+       if (tok is not { Type: TokenType.LeftBrace })
+       {
+          throw new ParsingError("Expected {");
+       }
+
+       _next(); // Consume '{'
+       
+       // Check if this looks like an object expression by looking ahead
+       var nextTok = _peek();
+       if (nextTok is { Type: TokenType.String } || nextTok is { Type: TokenType.RightBrace })
+       {
+          // This looks like an object expression, fall back to expression parsing
+          // Put the token back so ParseExpressionStatement can handle it properly
+          _ptr--;
+          return ParseExpressionStatement();
+       }
+       
+       var node = new BlockStatementNode();
+       
+       while ((_peek() is { Type: not TokenType.RightBrace }) && _peek() != null)
+       {
+          var currentTok = _peek();
+          if (currentTok == null) break;
+          
+          var statement = ParseStatement(currentTok);
+          if (statement != null)
+          {
+             node.Body.Add(statement);
+          }
+       }
+       
+       if (_peek() is not { Type: TokenType.RightBrace })
+       {
+          throw new ParsingError("Expected }");
+       }
+       
+       _next(); // Consume '}'
+       return node;
+    }
 
    private StatementNode? ParseSemicolon()
    {
@@ -649,8 +739,9 @@ _next();
          TokenType.If => ParseIfStatement(),
          TokenType.While => ParseWhileStatement(),
          TokenType.Semicolon => ParseSemicolon(),
-         TokenType.Switch => ParseSwitchStatement(),
-         _ => ParseExpressionStatement()
+TokenType.Switch => ParseSwitchStatement(),
+          TokenType.LeftBrace => ParseBlockStatement(),
+          _ => ParseExpressionStatement()
       };
    }
 
@@ -818,7 +909,7 @@ _next();
             break;
 
          case BlockStatementNode blockNode:
-            foreach (var statement in blockNode.Statements)
+            foreach (var statement in blockNode.Body)
             {
                PrintNode(statement, indent + 1);
             }
@@ -847,8 +938,8 @@ _next();
             break;
 
          case ReturnStatementNode returnNode:
-            if (returnNode.Argument != null)
-               PrintNode(returnNode.Argument, indent + 1);
+            if (returnNode.Value != null)
+               PrintNode(returnNode.Value, indent + 1);
             break;
 
          case ExpressionStatementNode exprStmtNode:

@@ -128,7 +128,7 @@ public class ClassMemberNode : AstNode
 
 public class ReturnStatementNode : StatementNode
 {
-    public ExpressionNode? Argument { get; set; }
+    public ExpressionNode? Value { get; set; }
     public override string NodeType => "ReturnStatement";
 }
 
@@ -167,7 +167,7 @@ public class CatchClauseNode : AstNode
 
 public class BlockStatementNode : StatementNode
 {
-    public List<StatementNode> Statements { get; set; } = new();
+    public List<StatementNode> Body { get; set; } = new();
     public override string NodeType => "BlockStatement";
 }
 
@@ -306,6 +306,48 @@ public class ModuloExpressionNode(ExpressionNode l, ExpressionNode r) : Expressi
     public ExpressionNode Left { get; set; } = l;
     public ExpressionNode Right { get; set; } = r;
     public override string NodeType => "ModuloExpression";
+}
+
+public class EqualExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "EqualExpression";
+}
+
+public class NotEqualExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "NotEqualExpression";
+}
+
+public class LessThanExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "LessThanExpression";
+}
+
+public class LessThanOrEqualExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "LessThanOrEqualExpression";
+}
+
+public class GreaterThanExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "GreaterThanExpression";
+}
+
+public class GreaterThanOrEqualExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "GreaterThanOrEqualExpression";
 }
 
 
