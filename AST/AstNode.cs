@@ -430,3 +430,80 @@ public class ExportDeclarationNode : StatementNode
     public DeclarationNode Declaration { get; set; }
     public override string NodeType => "ExportDeclaration";
 }
+
+// Helper class for validating assignment expressions
+public static class AssignmentExpressionValidator
+{
+    private static readonly HashSet<string> ValidOperators = new()
+    {
+        "=", "+=", "-=", "*=", "/=", "%="
+    };
+
+    public static void ValidateAssignment(AssignmentExpressionNode node)
+    {
+        if (node == null) return;
+        
+        ValidateOperator(node.Operator);
+        ValidateOperands(node);
+    }
+
+    private static void ValidateOperator(string? op)
+    {
+        if (string.IsNullOrEmpty(op) || !ValidOperators.Contains(op))
+            throw new System.ArgumentException($"Unknown or invalid assignment operator: {op}");
+    }
+
+    private static void ValidateOperands(AssignmentExpressionNode assign)
+    {
+        if (assign.Left == null)
+            throw new System.ArgumentException("Assignment left operand cannot be null");
+        
+        if (assign.Right == null)
+            throw new System.ArgumentException("Assignment right operand cannot be null");
+        
+        ValidateExpression(assign.Left);
+        ValidateExpression(assign.Right);
+    }
+
+    private static void ValidateExpression(ExpressionNode expr)
+    {
+        if (expr == null) return;
+        
+        if (expr is AssignmentExpressionNode assignExpr)
+        {
+            ValidateAssignment(assignExpr);
+        }
+        else if (expr is CallExpressionNode callExpr)
+        {
+            ValidateCall(callExpr);
+        }
+        else if (expr is IdentifierNode identExpr)
+        {
+            ValidateIdentifier(identExpr);
+        }
+    }
+
+    private static void ValidateIdentifier(IdentifierNode ident)
+    {
+        if (string.IsNullOrEmpty(ident.Name))
+        {
+            throw new System.ArgumentException("Identifier cannot have empty name");
+        }
+        if (!char.IsLetter(ident.Name[0]))
+        {
+            throw new System.ArgumentException($"Identifier '{ident.Name}' must start with a letter, found '{ident.Name[0]}'");
+        }
+    }
+
+    private static void ValidateCall(CallExpressionNode call)
+    {
+        if (call == null) return;
+        
+        ValidateExpression(call.Callee);
+        
+        foreach (var arg in call.Arguments)
+        {
+            ValidateExpression(arg);
+        }
+    }
+}
