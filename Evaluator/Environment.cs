@@ -44,7 +44,8 @@ public class Environment
             return;
         }
 
-        throw new Exception($"Undefined variable: {name}");
+        // Allow assignment to create variables (like JavaScript)
+        _bindings[name] = value;
     }
 
     public Environment CreateChild()

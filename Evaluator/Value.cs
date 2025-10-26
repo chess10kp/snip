@@ -1,4 +1,76 @@
+using Snip.AST;
+
 namespace Snip.Evaluator;
+
+public class FunctionValue
+{
+    public List<ParameterNode> Parameters { get; }
+    public BlockStatementNode Body { get; }
+    public Environment Closure { get; }
+
+    public FunctionValue(List<ParameterNode> parameters, BlockStatementNode body, Environment closure)
+    {
+        Parameters = parameters;
+        Body = body;
+        Closure = closure;
+    }
+}
+
+public class ClassValue
+{
+    public string Name { get; }
+    public ClassValue? SuperClass { get; }
+    public Dictionary<string, ClassMember> Members { get; }
+    public Environment Closure { get; }
+
+    public ClassValue(string name, ClassValue? superClass, Dictionary<string, ClassMember> members, Environment closure)
+    {
+        Name = name;
+        SuperClass = superClass;
+        Members = members;
+        Closure = closure;
+    }
+}
+
+public class ClassInstance
+{
+    public ClassValue Class { get; }
+    public Dictionary<string, Value> Properties { get; }
+
+    public ClassInstance(ClassValue @class, Dictionary<string, Value> properties)
+    {
+        Class = @class;
+        Properties = properties;
+    }
+}
+
+public class ClassMember
+{
+    public string Name { get; }
+    public string Visibility { get; }
+    public bool IsStatic { get; }
+    public bool IsReadonly { get; }
+    public Value? Value { get; }
+
+    public ClassMember(string name, string visibility, bool isStatic, bool isReadonly, Value? value)
+    {
+        Name = name;
+        Visibility = visibility;
+        IsStatic = isStatic;
+        IsReadonly = isReadonly;
+        Value = value;
+    }
+}
+
+public class ReturnValue
+{
+    public Value Value { get; }
+
+    public ReturnValue(Value value)
+    {
+        Value = value;
+    }
+}
 
 public enum ValueType
 {
@@ -10,7 +82,10 @@ public enum ValueType
     Undefined,
     Array,
     Object,
-    Function
+    Function,
+    Class,
+    Instance,
+    Return
 }
 
 public class Value
@@ -33,6 +108,10 @@ public class Value
     public static Value Undefined() => new(ValueType.Undefined);
     public static Value Array(List<Value> values) => new(ValueType.Array, values);
     public static Value Object(Dictionary<string, Value> properties) => new(ValueType.Object, properties);
+    public static Value Function(FunctionValue function) => new(ValueType.Function, function);
+    public static Value Class(ClassValue @class) => new(ValueType.Class, @class);
+    public static Value Instance(ClassInstance instance) => new(ValueType.Instance, instance);
+    public static Value Return(ReturnValue returnValue) => new(ValueType.Return, returnValue);
 
     public override string ToString()
     {
@@ -47,6 +126,8 @@ public class Value
             ValueType.Array => $"[{string.Join(", ", ((List<Value>)Data!).Select(v => v.ToString()))}]",
             ValueType.Object => $"{{{string.Join(", ", ((Dictionary<string, Value>)Data!).Select(kv => $"\"{kv.Key}\": {kv.Value}"))}}}",
             ValueType.Function => "[Function]",
+            ValueType.Class => $"[class {(ClassValue)Data!}]",
+            ValueType.Instance => $"[object {(ClassInstance)Data!}]",
             _ => "unknown"
         };
     }
