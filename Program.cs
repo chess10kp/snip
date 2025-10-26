@@ -36,8 +36,13 @@ namespace Snip
 
             var parser = new Parser.Parser(lexer);
             var program = parser.Parse();
-            parser.PrintParseTree(program);
-            Console.Write("Finish Compilation");
+
+            var evaluator = new Evaluator.Evaluator();
+            var env = new Evaluator.Environment();
+            var result = evaluator.Eval(program, env);
+
+            Console.WriteLine(result);
+            Console.Write("Finish Execution");
         }
     }
 }

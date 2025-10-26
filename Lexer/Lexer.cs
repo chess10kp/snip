@@ -282,9 +282,16 @@ public class Lexer
             case ',':
                 AddToken(TokenType.Comma, ",");
                 break;
-            case '.':
-                AddToken(TokenType.Dot, ".");
-                break;
+             case '.':
+                 if (IsDigit(Peek()))
+                 {
+                     ScanNumber();
+                 }
+                 else
+                 {
+                     AddToken(TokenType.Dot, ".");
+                 }
+                 break;
             case ';':
                 AddToken(TokenType.Semicolon, ";");
                 break;
@@ -427,11 +434,11 @@ public class Lexer
             case '\'':
                 ScanString('\'');
                 break;
-            case '`':
-                ScanTemplateString();
-                break;
+             case '`':
+                 ScanTemplateString();
+                 break;
 
-            default:
+             default:
                 if (IsDigit(c))
                 {
                     ScanNumber();

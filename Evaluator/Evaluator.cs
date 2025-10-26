@@ -31,6 +31,11 @@ public class Evaluator
             AssignmentExpressionNode assignExpr => EvalAssignment(assignExpr, env),
             LetStatementNode letStmt => EvalLet(letStmt, env),
             ExpressionStatementNode exprStmt => Eval(exprStmt.Expression, env),
+            IfStatementNode ifStmt => EvalIf(ifStmt, env),
+            ConditionalExpressionNode condExpr => EvalConditional(condExpr, env),
+            BlockStatementNode blockStmt => EvalBlock(blockStmt, env),
+            WhileStatementNode whileStmt => EvalWhile(whileStmt, env),
+            ForStatementNode forStmt => EvalFor(forStmt, env),
             _ => throw new NotImplementedException($"Evaluation not implemented for {node.NodeType}")
         };
     }
@@ -68,7 +73,7 @@ public class Evaluator
     {
         if (left.Type == ValueType.String || right.Type == ValueType.String)
         {
-            return Value.String(left.ToString() + right.ToString());
+            return Value.String((string)left.Data! + (string)right.Data!);
         }
 
         var leftNum = ToNumber(left);
@@ -181,5 +186,79 @@ public class Evaluator
         }
         env.Define(node.Name!.Name, value ?? Value.Undefined());
         return Value.Undefined();
+    }
+
+    private Value EvalIf(IfStatementNode node, Environment env)
+    {
+        var condition = Eval(node.Condition, env);
+        if (IsTruthy(condition))
+        {
+            return EvalBlock(node.Consequence, env);
+        }
+        else if (node.Alternative != null)
+        {
+            return EvalBlock(node.Alternative, env);
+        }
+        return Value.Undefined();
+    }
+
+    private Value EvalConditional(ConditionalExpressionNode node, Environment env)
+    {
+        var test = Eval(node.Test, env);
+        if (IsTruthy(test))
+        {
+            return Eval(node.Consequent, env);
+        }
+        else
+        {
+            return Eval(node.Alternative, env);
+        }
+    }
+
+    private Value EvalBlock(BlockStatementNode node, Environment env)
+    {
+        var blockEnv = new Environment(env);
+        Value result = Value.Undefined();
+        foreach (var stmt in node.Body)
+        {
+            result = Eval(stmt, blockEnv);
+        }
+        return result;
+    }
+
+    private Value EvalWhile(WhileStatementNode node, Environment env)
+    {
+        Value result = Value.Undefined();
+        while (IsTruthy(Eval(node.Condition, env)))
+        {
+            result = EvalBlock(node.Body, env);
+        }
+        return result;
+    }
+
+    private Value EvalFor(ForStatementNode node, Environment env)
+    {
+        var loopEnv = new Environment(env);
+        Value result = Value.Undefined();
+
+        // Evaluate initializer
+        if (node.Initializer != null)
+        {
+            Eval(node.Initializer, loopEnv);
+        }
+
+        // Loop
+        while (node.Condition == null || IsTruthy(Eval(node.Condition, loopEnv)))
+        {
+            result = EvalBlock(node.Body, loopEnv);
+
+            // Evaluate update
+            if (node.Update != null)
+            {
+                Eval(node.Update, loopEnv);
+            }
+        }
+
+        return result;
     }
 }
