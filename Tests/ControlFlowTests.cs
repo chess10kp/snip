@@ -23,9 +23,9 @@ public class ControlFlowTests
         var ifStmt = Assert.IsType<IfStatementNode>(program.Statements[0]);
         var condition = Assert.IsType<GreaterThanExpressionNode>(ifStmt.Condition);
         var left = Assert.IsType<IdentifierNode>(condition.Left);
-        var right = Assert.IsType<IntegerLiteralNode>(condition.Right);
+        var right = Assert.IsType<NumberLiteralNode>(condition.Right);
         Assert.Equal("x", left.Name);
-        Assert.Equal(0L, right.Value);
+        Assert.Equal(0.0, right.Value);
         
         var consequence = Assert.IsType<BlockStatementNode>(ifStmt.Consequence);
         var returnStmt = Assert.IsType<ReturnStatementNode>(consequence.Body[0]);
@@ -56,10 +56,10 @@ public class ControlFlowTests
         var returnStmt2 = Assert.IsType<ReturnStatementNode>(alternative.Body[0]);
         
         var returnValue1 = Assert.IsType<IdentifierNode>(returnStmt1.Value);
-        var returnValue2 = Assert.IsType<IntegerLiteralNode>(returnStmt2.Value);
+        var returnValue2 = Assert.IsType<NumberLiteralNode>(returnStmt2.Value);
         
         Assert.Equal("x", returnValue1.Name);
-        Assert.Equal(0L, returnValue2.Value);
+        Assert.Equal(0.0, returnValue2.Value);
     }
 
     [Fact]
@@ -81,9 +81,9 @@ public class ControlFlowTests
         
         var condition = Assert.IsType<GreaterThanExpressionNode>(innerIf.Condition);
         var left = Assert.IsType<IdentifierNode>(condition.Left);
-        var right = Assert.IsType<IntegerLiteralNode>(condition.Right);
+        var right = Assert.IsType<NumberLiteralNode>(condition.Right);
         Assert.Equal("y", left.Name);
-        Assert.Equal(0L, right.Value);
+        Assert.Equal(0.0, right.Value);
     }
 
     [Fact]
@@ -100,8 +100,8 @@ public class ControlFlowTests
         // Assert
         Assert.Single(program.Statements);
         var returnStmt = Assert.IsType<ReturnStatementNode>(program.Statements[0]);
-        var value = Assert.IsType<IntegerLiteralNode>(returnStmt.Value);
-        Assert.Equal(42L, value.Value);
+        var value = Assert.IsType<NumberLiteralNode>(returnStmt.Value);
+        Assert.Equal(42.0, value.Value);
     }
 
     [Fact]
@@ -173,18 +173,18 @@ public class ControlFlowTests
         Assert.Equal(2, switchStmt.Cases.Count);
         
         var case1 = Assert.IsType<CaseNode>(switchStmt.Cases[0]);
-        var case1Test = Assert.IsType<IntegerLiteralNode>(case1.Test);
-        Assert.Equal(1L, case1Test.Value);
+        var case1Test = Assert.IsType<NumberLiteralNode>(case1.Test);
+        Assert.Equal(1.0, case1Test.Value);
         var case1Consequent = Assert.IsType<ReturnStatementNode>(case1.Consequent[0]);
-        var case1Value = Assert.IsType<IntegerLiteralNode>(case1Consequent.Value);
-        Assert.Equal(1L, case1Value.Value);
+        var case1Value = Assert.IsType<NumberLiteralNode>(case1Consequent.Value);
+        Assert.Equal(1.0, case1Value.Value);
         
         var case2 = Assert.IsType<CaseNode>(switchStmt.Cases[1]);
-        var case2Test = Assert.IsType<IntegerLiteralNode>(case2.Test);
-        Assert.Equal(2L, case2Test.Value);
+        var case2Test = Assert.IsType<NumberLiteralNode>(case2.Test);
+        Assert.Equal(2.0, case2Test.Value);
         var case2Consequent = Assert.IsType<ReturnStatementNode>(case2.Consequent[0]);
-        var case2Value = Assert.IsType<IntegerLiteralNode>(case2Consequent.Value);
-        Assert.Equal(2L, case2Value.Value);
+        var case2Value = Assert.IsType<NumberLiteralNode>(case2Consequent.Value);
+        Assert.Equal(2.0, case2Value.Value);
     }
 
     [Fact]
@@ -204,13 +204,13 @@ public class ControlFlowTests
         Assert.Single(switchStmt.Cases);
         
         var case1 = Assert.IsType<CaseNode>(switchStmt.Cases[0]);
-        var case1Test = Assert.IsType<IntegerLiteralNode>(case1.Test);
-        Assert.Equal(1L, case1Test.Value);
+        var case1Test = Assert.IsType<NumberLiteralNode>(case1.Test);
+        Assert.Equal(1.0, case1Test.Value);
         
         var defaultCase = Assert.IsType<CaseNode>(switchStmt.DefaultCase);
         var defaultConsequent = Assert.IsType<ReturnStatementNode>(defaultCase.Consequent[0]);
-        var defaultValue = Assert.IsType<IntegerLiteralNode>(defaultConsequent.Value);
-        Assert.Equal(0L, defaultValue.Value);
+        var defaultValue = Assert.IsType<NumberLiteralNode>(defaultConsequent.Value);
+        Assert.Equal(0.0, defaultValue.Value);
     }
 
     [Fact]

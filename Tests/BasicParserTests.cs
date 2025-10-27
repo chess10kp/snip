@@ -21,8 +21,8 @@ public class BasicParserTests
       // Assert
       Assert.Single(program.Statements);
       var exprStmt = Assert.IsType<ExpressionStatementNode>(program.Statements[0]);
-      var intLiteral = Assert.IsType<IntegerLiteralNode>(exprStmt.Expression);
-      Assert.Equal(42L, intLiteral.Value);
+      var numberLiteral = Assert.IsType<NumberLiteralNode>(exprStmt.Expression);
+      Assert.Equal(42.0, numberLiteral.Value);
    }
 
    [Fact]
@@ -95,7 +95,7 @@ public class BasicParserTests
       var letStmt = Assert.IsType<LetStatementNode>(program.Statements[0]);
       var identPattern = Assert.IsType<IdentifierPatternNode>(letStmt.Pattern);
       Assert.Equal("x", identPattern.Name);
-      var value = Assert.IsType<IntegerLiteralNode>(letStmt.Value);
+      var value = Assert.IsType<NumberLiteralNode>(letStmt.Value);
       Assert.Equal(42L, value.Value);
    }
 
@@ -114,8 +114,8 @@ public class BasicParserTests
       Assert.Single(program.Statements);
       var exprStmt = Assert.IsType<ExpressionStatementNode>(program.Statements[0]);
       var addExpr = Assert.IsType<AddExpressionNode>(exprStmt.Expression);
-      var left = Assert.IsType<IntegerLiteralNode>(addExpr.Left);
-      var right = Assert.IsType<IntegerLiteralNode>(addExpr.Right);
+      var left = Assert.IsType<NumberLiteralNode>(addExpr.Left);
+      var right = Assert.IsType<NumberLiteralNode>(addExpr.Right);
       Assert.Equal(1L, left.Value);
       Assert.Equal(2L, right.Value);
    }
@@ -136,11 +136,11 @@ public class BasicParserTests
       var exprStmt = Assert.IsType<ExpressionStatementNode>(program.Statements[0]);
       var mulExpr = Assert.IsType<MultiplyExpressionNode>(exprStmt.Expression);
       var left = Assert.IsType<AddExpressionNode>(mulExpr.Left);
-      var right = Assert.IsType<IntegerLiteralNode>(mulExpr.Right);
+      var right = Assert.IsType<NumberLiteralNode>(mulExpr.Right);
       Assert.Equal(3L, right.Value);
       
-      var addLeft = Assert.IsType<IntegerLiteralNode>(left.Left);
-      var addRight = Assert.IsType<IntegerLiteralNode>(left.Right);
+      var addLeft = Assert.IsType<NumberLiteralNode>(left.Left);
+      var addRight = Assert.IsType<NumberLiteralNode>(left.Right);
       Assert.Equal(1L, addLeft.Value);
       Assert.Equal(2L, addRight.Value);
    }
@@ -180,8 +180,8 @@ public class BasicParserTests
       var arrayExpr = Assert.IsType<ArrayExpressionNode>(exprStmt.Expression);
       Assert.Equal(3, arrayExpr.Elements.Count);
       
-      var elem1 = Assert.IsType<IntegerLiteralNode>(arrayExpr.Elements[0]);
-      var elem2 = Assert.IsType<IntegerLiteralNode>(arrayExpr.Elements[1]);
+      var elem1 = Assert.IsType<NumberLiteralNode>(arrayExpr.Elements[0]);
+      var elem2 = Assert.IsType<NumberLiteralNode>(arrayExpr.Elements[1]);
       var elem3 = Assert.IsType<StringLiteralNode>(arrayExpr.Elements[2]);
       Assert.Equal(1L, elem1.Value);
       Assert.Equal(2L, elem2.Value);
@@ -229,7 +229,7 @@ public class BasicParserTests
       Assert.Equal("age", prop2.Key);
       
       var value1 = Assert.IsType<StringLiteralNode>(prop1.Value);
-      var value2 = Assert.IsType<IntegerLiteralNode>(prop2.Value);
+      var value2 = Assert.IsType<NumberLiteralNode>(prop2.Value);
       Assert.Equal("John", value1.Value);
       Assert.Equal(30L, value2.Value);
    }
@@ -257,8 +257,8 @@ public class BasicParserTests
       var identPatternY = Assert.IsType<IdentifierPatternNode>(letY.Pattern);
       Assert.Equal("y", identPatternY.Name);
       
-      var xValue = Assert.IsType<IntegerLiteralNode>(letX.Value);
-      var yValue = Assert.IsType<IntegerLiteralNode>(letY.Value);
+      var xValue = Assert.IsType<NumberLiteralNode>(letX.Value);
+      var yValue = Assert.IsType<NumberLiteralNode>(letY.Value);
       Assert.Equal(1L, xValue.Value);
       Assert.Equal(2L, yValue.Value);
       

@@ -24,8 +24,8 @@ public class ParserTests
         var unaryExpr = Assert.IsType<UnaryExpressionNode>(exprStmt.Expression);
         Assert.Equal("+", unaryExpr.Operator);
         Assert.True(unaryExpr.IsPrefix);
-        var operand = Assert.IsType<IntegerLiteralNode>(unaryExpr.Argument);
-        Assert.Equal(42L, operand.Value);
+        var operand = Assert.IsType<NumberLiteralNode>(unaryExpr.Argument);
+        Assert.Equal(42.0, operand.Value);
     }
 
     [Fact]
@@ -45,8 +45,8 @@ public class ParserTests
         var unaryExpr = Assert.IsType<UnaryExpressionNode>(exprStmt.Expression);
         Assert.Equal("-", unaryExpr.Operator);
         Assert.True(unaryExpr.IsPrefix);
-        var operand = Assert.IsType<IntegerLiteralNode>(unaryExpr.Argument);
-        Assert.Equal(42L, operand.Value);
+        var operand = Assert.IsType<NumberLiteralNode>(unaryExpr.Argument);
+        Assert.Equal(42.0, operand.Value);
     }
 
     [Fact]
@@ -67,10 +67,10 @@ public class ParserTests
         Assert.Equal("-", unaryExpr.Operator);
         Assert.True(unaryExpr.IsPrefix);
         var addExpr = Assert.IsType<AddExpressionNode>(unaryExpr.Argument);
-        var left = Assert.IsType<IntegerLiteralNode>(addExpr.Left);
-        var right = Assert.IsType<IntegerLiteralNode>(addExpr.Right);
-        Assert.Equal(3L, left.Value);
-        Assert.Equal(4L, right.Value);
+        var left = Assert.IsType<NumberLiteralNode>(addExpr.Left);
+        var right = Assert.IsType<NumberLiteralNode>(addExpr.Right);
+        Assert.Equal(3.0, left.Value);
+        Assert.Equal(4.0, right.Value);
     }
 
     [Fact]
@@ -88,10 +88,10 @@ public class ParserTests
         Assert.Single(program.Statements);
         var exprStmt = Assert.IsType<ExpressionStatementNode>(program.Statements[0]);
         var powerExpr = Assert.IsType<PowerExpressionNode>(exprStmt.Expression);
-        var left = Assert.IsType<IntegerLiteralNode>(powerExpr.Left);
-        var right = Assert.IsType<IntegerLiteralNode>(powerExpr.Right);
-        Assert.Equal(2L, left.Value);
-        Assert.Equal(3L, right.Value);
+        var left = Assert.IsType<NumberLiteralNode>(powerExpr.Left);
+        var right = Assert.IsType<NumberLiteralNode>(powerExpr.Right);
+        Assert.Equal(2.0, left.Value);
+        Assert.Equal(3.0, right.Value);
     }
 
     [Fact]
@@ -109,13 +109,13 @@ public class ParserTests
         Assert.Single(program.Statements);
         var exprStmt = Assert.IsType<ExpressionStatementNode>(program.Statements[0]);
         var multiplyExpr = Assert.IsType<MultiplyExpressionNode>(exprStmt.Expression);
-        var left = Assert.IsType<IntegerLiteralNode>(multiplyExpr.Left);
+        var left = Assert.IsType<NumberLiteralNode>(multiplyExpr.Left);
         var powerExpr = Assert.IsType<PowerExpressionNode>(multiplyExpr.Right);
-        Assert.Equal(2L, left.Value);
-        var powerLeft = Assert.IsType<IntegerLiteralNode>(powerExpr.Left);
-        var powerRight = Assert.IsType<IntegerLiteralNode>(powerExpr.Right);
-        Assert.Equal(3L, powerLeft.Value);
-        Assert.Equal(4L, powerRight.Value);
+        Assert.Equal(2.0, left.Value);
+        var powerLeft = Assert.IsType<NumberLiteralNode>(powerExpr.Left);
+        var powerRight = Assert.IsType<NumberLiteralNode>(powerExpr.Right);
+        Assert.Equal(3.0, powerLeft.Value);
+        Assert.Equal(4.0, powerRight.Value);
     }
 
     [Fact]
@@ -204,12 +204,12 @@ public class ParserTests
 
         var test = Assert.IsType<GreaterThanExpressionNode>(condExpr.Test);
         var consequent = Assert.IsType<IdentifierNode>(condExpr.Consequent);
-        var alternative = Assert.IsType<IntegerLiteralNode>(condExpr.Alternative);
+        var alternative = Assert.IsType<NumberLiteralNode>(condExpr.Alternative);
 
         Assert.Equal("x", Assert.IsType<IdentifierNode>(test.Left).Name);
-        Assert.Equal(0L, Assert.IsType<IntegerLiteralNode>(test.Right).Value);
+        Assert.Equal(0.0, Assert.IsType<NumberLiteralNode>(test.Right).Value);
         Assert.Equal("x", consequent.Name);
-        Assert.Equal(0L, alternative.Value);
+        Assert.Equal(0.0, alternative.Value);
     }
 
     [Fact]
@@ -306,11 +306,11 @@ public class ParserTests
         var init = Assert.IsType<LetStatementNode>(forStmt.Initializer);
         var identPattern = Assert.IsType<IdentifierPatternNode>(init.Pattern);
         Assert.Equal("i", identPattern.Name);
-        Assert.Equal(0L, Assert.IsType<IntegerLiteralNode>(init.Value).Value);
+        Assert.Equal(0.0, Assert.IsType<NumberLiteralNode>(init.Value).Value);
 
         var condition = Assert.IsType<LessThanExpressionNode>(forStmt.Condition);
         Assert.Equal("i", Assert.IsType<IdentifierNode>(condition.Left).Name);
-        Assert.Equal(10L, Assert.IsType<IntegerLiteralNode>(condition.Right).Value);
+        Assert.Equal(10.0, Assert.IsType<NumberLiteralNode>(condition.Right).Value);
 
         var increment = Assert.IsType<UnaryExpressionNode>(forStmt.Update);
         Assert.Equal("++", increment.Operator);
@@ -341,8 +341,8 @@ public class ParserTests
         var varStmt = Assert.IsType<VarStatementNode>(program.Statements[0]);
         var identPattern = Assert.IsType<IdentifierPatternNode>(varStmt.Name);
         Assert.Equal("x", identPattern.Name);
-        var value = Assert.IsType<IntegerLiteralNode>(varStmt.Value);
-        Assert.Equal(42L, value.Value);
+        var value = Assert.IsType<NumberLiteralNode>(varStmt.Value);
+        Assert.Equal(42.0, value.Value);
     }
 
     [Fact]
@@ -361,7 +361,7 @@ public class ParserTests
         var constStmt = Assert.IsType<ConstStatementNode>(program.Statements[0]);
         var identPattern = Assert.IsType<IdentifierPatternNode>(constStmt.Pattern);
         Assert.Equal("PI", identPattern.Name);
-        var value = Assert.IsType<FloatLiteralNode>(constStmt.Value);
+        var value = Assert.IsType<NumberLiteralNode>(constStmt.Value);
         Assert.Equal(3.14, value.Value);
     }
 
@@ -389,7 +389,7 @@ public class ParserTests
 
         var condition = Assert.IsType<LessThanExpressionNode>(doWhileStmt.Condition);
         Assert.Equal("x", Assert.IsType<IdentifierNode>(condition.Left).Name);
-        Assert.Equal(10L, Assert.IsType<IntegerLiteralNode>(condition.Right).Value);
+        Assert.Equal(10.0, Assert.IsType<NumberLiteralNode>(condition.Right).Value);
     }
 
     [Fact]

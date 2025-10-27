@@ -25,7 +25,7 @@ public class AssignmentOperatorTests
         
         Assert.Equal("=", assignExpr.Operator);
         Assert.Equal("x", Assert.IsType<IdentifierNode>(assignExpr.Left).Name);
-        Assert.Equal(5L, Assert.IsType<IntegerLiteralNode>(assignExpr.Right).Value);
+        Assert.Equal(5.0, Assert.IsType<NumberLiteralNode>(assignExpr.Right).Value);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class AssignmentOperatorTests
         
         Assert.Equal("+=", assignExpr.Operator);
         Assert.Equal("x", Assert.IsType<IdentifierNode>(assignExpr.Left).Name);
-        Assert.Equal(10L, Assert.IsType<IntegerLiteralNode>(assignExpr.Right).Value);
+        Assert.Equal(10.0, Assert.IsType<NumberLiteralNode>(assignExpr.Right).Value);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class AssignmentOperatorTests
             
             Assert.Equal(op, assignExpr.Operator);
             Assert.Equal("x", Assert.IsType<IdentifierNode>(assignExpr.Left).Name);
-            Assert.Equal(5L, Assert.IsType<IntegerLiteralNode>(assignExpr.Right).Value);
+            Assert.Equal(5.0, Assert.IsType<NumberLiteralNode>(assignExpr.Right).Value);
         }
     }
 
@@ -99,7 +99,7 @@ public class AssignmentOperatorTests
         var innerAssign2 = Assert.IsType<AssignmentExpressionNode>(innerAssign1.Right);
         Assert.Equal("=", innerAssign2.Operator);
         Assert.Equal("c", Assert.IsType<IdentifierNode>(innerAssign2.Left).Name);
-        Assert.Equal(10L, Assert.IsType<IntegerLiteralNode>(innerAssign2.Right).Value);
+        Assert.Equal(10.0, Assert.IsType<NumberLiteralNode>(innerAssign2.Right).Value);
     }
 
     [Fact]
@@ -126,6 +126,6 @@ public class AssignmentOperatorTests
         var addExpr = Assert.IsType<AddExpressionNode>(multiplyExpr.Left);
         Assert.Equal("y", Assert.IsType<IdentifierNode>(addExpr.Left).Name);
         Assert.Equal("z", Assert.IsType<IdentifierNode>(addExpr.Right).Name);
-        Assert.Equal(2L, Assert.IsType<IntegerLiteralNode>(multiplyExpr.Right).Value);
+        Assert.Equal(2.0, Assert.IsType<NumberLiteralNode>(multiplyExpr.Right).Value);
     }
 }

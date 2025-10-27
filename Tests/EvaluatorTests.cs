@@ -37,7 +37,7 @@ public class EvaluatorTests
     public void EvalFunctionCall_ShouldExecuteFunction()
     {
         var result = Evaluate("function add(a, b) { return a + b; } add(2, 3);");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(5.0, result.Data);
     }
 
@@ -45,8 +45,8 @@ public class EvaluatorTests
     public void EvalFunctionCallWithReturn_ShouldReturnValue()
     {
         var result = Evaluate("function test() { return 42; } test();");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class EvaluatorTests
         Assert.Equal(Snip.Evaluator.ValueType.Object, result.Type);
         var obj = (Dictionary<string, Value>)result.Data!;
         Assert.Equal("John", obj["name"].Data);
-        Assert.Equal(30L, obj["age"].Data);
+        Assert.Equal(30.0, obj["age"].Data);
     }
 
     [Fact]
@@ -74,20 +74,20 @@ public class EvaluatorTests
         Assert.Equal(Snip.Evaluator.ValueType.Array, result.Type);
         var arr = (List<Value>)result.Data!;
         Assert.Equal(3, arr.Count);
-        Assert.Equal(1L, arr[0].Data);
-        Assert.Equal(2L, arr[1].Data);
-        Assert.Equal(3L, arr[2].Data);
+        Assert.Equal(1.0, arr[0].Data);
+        Assert.Equal(2.0, arr[1].Data);
+        Assert.Equal(3.0, arr[2].Data);
     }
 
     [Fact]
     public void EvalCompoundAssignment_ShouldWorkCorrectly()
     {
         var result = Evaluate("let x = 5; x += 3; x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(8.0, result.Data);
 
         result = Evaluate("let y = 10; y *= 2; y;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(20.0, result.Data);
     }
 
@@ -95,15 +95,15 @@ public class EvaluatorTests
     public void EvalVarStatement_ShouldDefineVariable()
     {
         var result = Evaluate("var x = 42; x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalConstStatement_ShouldDefineConstant()
     {
         var result = Evaluate("const PI = 3.14; PI;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(3.14, result.Data);
     }
 
@@ -145,7 +145,7 @@ public class EvaluatorTests
     public void EvalAddExpression_ShouldReturnSum()
     {
         var result = Evaluate("1 + 2;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(3.0, result.Data);
     }
 
@@ -153,7 +153,7 @@ public class EvaluatorTests
     public void EvalSubtractExpression_ShouldReturnDifference()
     {
         var result = Evaluate("5 - 3;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(2.0, result.Data);
     }
 
@@ -161,7 +161,7 @@ public class EvaluatorTests
     public void EvalMultiplyExpression_ShouldReturnProduct()
     {
         var result = Evaluate("4 * 3;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(12.0, result.Data);
     }
 
@@ -169,7 +169,7 @@ public class EvaluatorTests
     public void EvalDivideExpression_ShouldReturnQuotient()
     {
         var result = Evaluate("8 / 2;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(4.0, result.Data);
     }
 
@@ -177,7 +177,7 @@ public class EvaluatorTests
     public void EvalModuloExpression_ShouldReturnRemainder()
     {
         var result = Evaluate("7 % 3;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(1.0, result.Data);
     }
 
@@ -241,24 +241,24 @@ public class EvaluatorTests
     public void EvalLetStatement_ShouldDefineVariable()
     {
         var result = Evaluate("let x = 42; x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalAssignmentExpression_ShouldUpdateVariable()
     {
         var result = Evaluate("let x = 1; x = 2; x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(2L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(2.0, result.Data);
     }
 
     [Fact]
     public void EvalIfStatement_TrueCondition_ShouldExecuteConsequence()
     {
         var result = Evaluate("if (true) { 42; }");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
@@ -272,39 +272,39 @@ public class EvaluatorTests
     public void EvalIfElseStatement_TrueCondition_ShouldExecuteConsequence()
     {
         var result = Evaluate("if (true) { 42; } else { 24; }");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalIfElseStatement_FalseCondition_ShouldExecuteAlternative()
     {
         var result = Evaluate("if (false) { 42; } else { 24; }");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(24L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(24.0, result.Data);
     }
 
     [Fact]
     public void EvalConditionalExpression_TrueCondition_ShouldReturnConsequent()
     {
         var result = Evaluate("true ? 42 : 24;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalConditionalExpression_FalseCondition_ShouldReturnAlternative()
     {
         var result = Evaluate("false ? 42 : 24;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(24L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(24.0, result.Data);
     }
 
     [Fact]
     public void EvalBlockStatement_ShouldReturnLastExpression()
     {
         var result = Evaluate("{ let x = 1; let y = 2; x + y; }");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(3.0, result.Data);
     }
 
@@ -312,15 +312,15 @@ public class EvaluatorTests
     public void EvalBlockStatement_Scoping_ShouldIsolateVariables()
     {
         var result = Evaluate("let x = 1; { let x = 2; x; } x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(1L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(1.0, result.Data);
     }
 
     [Fact]
     public void EvalComplexExpression_ShouldWorkCorrectly()
     {
         var result = Evaluate("let x = 10; if (x > 5) { x * 2; } else { x / 2; }");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(20.0, result.Data);
     }
 
@@ -328,7 +328,7 @@ public class EvaluatorTests
     public void EvalWhileLoop_ShouldExecuteUntilConditionFalse()
     {
         var result = Evaluate("let x = 0; while (x < 3) { x = x + 1; } x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type); // Addition returns float
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type); // Addition returns float
         Assert.Equal(3.0, result.Data);
     }
 
@@ -336,15 +336,15 @@ public class EvaluatorTests
     public void EvalWhileLoop_ZeroIterations_ShouldNotExecuteBody()
     {
         var result = Evaluate("let x = 5; while (x < 3) { x = x + 1; } x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(5L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(5.0, result.Data);
     }
 
     [Fact]
     public void EvalForLoop_ShouldExecuteCorrectly()
     {
         var result = Evaluate("let sum = 0; for (let i = 0; i < 5; i = i + 1) { sum = sum + i; } sum;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type); // Addition returns float
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type); // Addition returns float
         Assert.Equal(10.0, result.Data); // 0+1+2+3+4 = 10
     }
 
@@ -352,7 +352,7 @@ public class EvaluatorTests
     public void EvalForLoop_WithoutInitializer_ShouldWork()
     {
         var result = Evaluate("let i = 0; let sum = 0; for (; i < 3; i = i + 1) { sum = sum + i; } sum;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type); // Addition returns float
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type); // Addition returns float
         Assert.Equal(3.0, result.Data); // 0+1+2 = 3
     }
 
@@ -360,7 +360,7 @@ public class EvaluatorTests
     public void EvalWhileLoop_WithContinue_ShouldSkipIteration()
     {
         var result = Evaluate("let x = 0; let sum = 0; while (x < 5) { x = x + 1; if (x == 3) { continue; } sum = sum + x; } sum;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(12.0, result.Data); // 1+2+4+5 = 12 (skips 3)
     }
 
@@ -368,7 +368,7 @@ public class EvaluatorTests
     public void EvalForLoop_WithContinue_ShouldSkipIteration()
     {
         var result = Evaluate("let sum = 0; for (let i = 0; i < 5; i = i + 1) { if (i == 2) { continue; } sum = sum + i; } sum;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type); // Addition returns float
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type); // Addition returns float
         Assert.Equal(8.0, result.Data); // 0+1+3+4 = 8 (skips 2)
     }
 
@@ -388,11 +388,11 @@ public class EvaluatorTests
     public void EvalUnaryMinusOperator_ShouldNegateNumber()
     {
         var result = Evaluate("-42;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(-42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(-42.0, result.Data);
 
         result = Evaluate("-3.14;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(-3.14, result.Data);
     }
 
@@ -400,11 +400,11 @@ public class EvaluatorTests
     public void EvalUnaryPlusOperator_ShouldReturnNumber()
     {
         var result = Evaluate("+42;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
 
         result = Evaluate("+3.14;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(3.14, result.Data);
     }
 
@@ -426,32 +426,32 @@ public class EvaluatorTests
     public void EvalClassWithProperty_ShouldInitializeProperty()
     {
         var result = Evaluate("class Test { x = 42; } let t = new Test(); t.x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalClassWithMethod_ShouldExecuteMethod()
     {
         var result = Evaluate("class Test { getValue() { return 42; } } let t = new Test(); t.getValue();");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalClassWithConstructor_ShouldExecuteConstructor()
     {
         var result = Evaluate("class Test { constructor() { this.value = 42; } } let t = new Test(); t.value;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalThisInMethod_ShouldReferToInstance()
     {
         var result = Evaluate("class Test { setValue(v) { this.value = v; } } let t = new Test(); t.setValue(123); t.value;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(123L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(123.0, result.Data);
     }
 
     [Fact]
@@ -498,24 +498,24 @@ public class EvaluatorTests
     public void EvalSwitchStatement_ShouldExecuteMatchingCase()
     {
         var result = Evaluate("let x = 1; switch (x) { case 1: 42; break; case 2: 24; break; }");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalSwitchStatement_ShouldFallThroughCases()
     {
         var result = Evaluate("let x = 2; switch (x) { case 1: 10; case 2: 20; case 3: 30; break; }");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(30L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(30.0, result.Data);
     }
 
     [Fact]
     public void EvalSwitchStatement_ShouldExecuteDefaultWhenNoMatch()
     {
         var result = Evaluate("let x = 5; switch (x) { case 1: 10; break; case 2: 20; break; default: 99; }");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(99L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(99.0, result.Data);
     }
 
     [Fact]
@@ -529,15 +529,15 @@ public class EvaluatorTests
     public void EvalDoWhileLoop_ShouldExecuteAtLeastOnce()
     {
         var result = Evaluate("let x = 0; do { x = 42; } while (false); x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalDoWhileLoop_ShouldExecuteMultipleTimes()
     {
         var result = Evaluate("let x = 0; do { x = x + 1; } while (x < 3); x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(3.0, result.Data);
     }
 
@@ -545,7 +545,7 @@ public class EvaluatorTests
     public void EvalDoWhileLoop_ShouldHandleBreak()
     {
         var result = Evaluate("let x = 0; do { x = x + 1; if (x == 2) { break; } } while (x < 10); x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(2.0, result.Data);
     }
 
@@ -553,7 +553,7 @@ public class EvaluatorTests
     public void EvalDoWhileLoop_ShouldHandleContinue()
     {
         var result = Evaluate("let x = 0; let sum = 0; do { x = x + 1; if (x == 2) { continue; } sum = sum + x; } while (x < 4); sum;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(8.0, result.Data); // 1 + 3 + 4 (skips sum for x=2)
     }
 
@@ -579,15 +579,15 @@ public class EvaluatorTests
     public void EvalTryCatch_ShouldExecuteTryBlockNormally()
     {
         var result = Evaluate("try { 42; } catch (e) { \"caught\"; }");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalTryFinally_ShouldExecuteFinallyBlock()
     {
         var result = Evaluate("let x = 0; try { x = 42; } finally { x = x + 1; } x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(43.0, result.Data);
     }
 
@@ -595,7 +595,7 @@ public class EvaluatorTests
     public void EvalTryCatchFinally_ShouldExecuteBothCatchAndFinally()
     {
         var result = Evaluate("let x = 0; try { throw \"error\"; x = 1; } catch (e) { x = 2; } finally { x = x + 10; } x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(12.0, result.Data);
     }
 
@@ -603,7 +603,7 @@ public class EvaluatorTests
     public void EvalTryCatchFinally_ShouldExecuteFinallyAfterNormalTry()
     {
         var result = Evaluate("let x = 0; try { x = 5; } catch (e) { x = 10; } finally { x = x * 2; } x;");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(10.0, result.Data);
     }
 
@@ -633,7 +633,7 @@ public class EvaluatorTests
     public void EvalFunctionRestParameters_ShouldCollectRemainingArgs()
     {
         var result = Evaluate("function sum(a, b, ...rest) { let total = a + b; for (let i = 0; i < rest.length; i++) { total += rest[i]; } return total; } sum(1, 2, 3, 4);");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(10.0, result.Data);
     }
 
@@ -641,7 +641,7 @@ public class EvaluatorTests
     public void EvalFunctionCallSpread_ShouldExpandArguments()
     {
         var result = Evaluate("function add(a, b, c) { return a + b + c; } let args = [1, 2, 3]; add(...args);");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(6.0, result.Data);
     }
 
@@ -656,7 +656,7 @@ public class EvaluatorTests
     public void EvalArrowFunctionCall_ShouldExecuteFunction()
     {
         var result = Evaluate("let add = (a, b) => a + b; add(2, 3);");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(5.0, result.Data);
     }
 
@@ -664,7 +664,7 @@ public class EvaluatorTests
     public void EvalArrowFunctionWithBlockBody_ShouldExecuteBlock()
     {
         var result = Evaluate("let test = (x) => { return x * 2; }; test(5);");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(10.0, result.Data);
     }
 
@@ -672,7 +672,7 @@ public class EvaluatorTests
     public void EvalArrowFunctionSingleParam_ShouldWork()
     {
         var result = Evaluate("let square = x => x * x; square(4);");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(16.0, result.Data);
     }
 
@@ -680,15 +680,15 @@ public class EvaluatorTests
     public void EvalArrowFunctionNoParams_ShouldWork()
     {
         var result = Evaluate("let get42 = () => 42; get42();");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]
     public void EvalArrowFunctionClosure_ShouldCaptureEnvironment()
     {
         var result = Evaluate("let multiplier = 2; let multiply = x => x * multiplier; multiply(5);");
-        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
         Assert.Equal(10.0, result.Data);
     }
 

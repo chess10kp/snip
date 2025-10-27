@@ -46,10 +46,10 @@ public class FunctionCallAndMemberAccessTests
       Assert.Equal("add", callee.Name);
       Assert.Equal(2, callExpr.Arguments.Count);
       
-      var arg1 = Assert.IsType<IntegerLiteralNode>(callExpr.Arguments[0]);
-      var arg2 = Assert.IsType<IntegerLiteralNode>(callExpr.Arguments[1]);
-      Assert.Equal(1L, arg1.Value);
-      Assert.Equal(2L, arg2.Value);
+      var arg1 = Assert.IsType<NumberLiteralNode>(callExpr.Arguments[0]);
+      var arg2 = Assert.IsType<NumberLiteralNode>(callExpr.Arguments[1]);
+      Assert.Equal(1.0, arg1.Value);
+      Assert.Equal(2.0, arg2.Value);
    }
 
    [Fact]
@@ -147,10 +147,10 @@ public class FunctionCallAndMemberAccessTests
       Assert.Equal("method", method.Name);
       Assert.Equal(2, callExpr.Arguments.Count);
       
-      var arg1 = Assert.IsType<IntegerLiteralNode>(callExpr.Arguments[0]);
-      var arg2 = Assert.IsType<IntegerLiteralNode>(callExpr.Arguments[1]);
-      Assert.Equal(1L, arg1.Value);
-      Assert.Equal(2L, arg2.Value);
+      var arg1 = Assert.IsType<NumberLiteralNode>(callExpr.Arguments[0]);
+      var arg2 = Assert.IsType<NumberLiteralNode>(callExpr.Arguments[1]);
+      Assert.Equal(1.0, arg1.Value);
+      Assert.Equal(2.0, arg2.Value);
    }
 
    [Fact]
@@ -193,9 +193,9 @@ public class FunctionCallAndMemberAccessTests
       Assert.Equal(2, newExpr.Arguments.Count);
       
       var arg1 = Assert.IsType<StringLiteralNode>(newExpr.Arguments[0]);
-      var arg2 = Assert.IsType<IntegerLiteralNode>(newExpr.Arguments[1]);
+      var arg2 = Assert.IsType<NumberLiteralNode>(newExpr.Arguments[1]);
       Assert.Equal("John", arg1.Value);
-      Assert.Equal(30L, arg2.Value);
+      Assert.Equal(30.0, arg2.Value);
    }
 
    [Fact]
@@ -251,10 +251,10 @@ public class FunctionCallAndMemberAccessTests
       
       // First argument: 1 + 2
       var arg1 = Assert.IsType<AddExpressionNode>(callExpr.Arguments[0]);
-      var left1 = Assert.IsType<IntegerLiteralNode>(arg1.Left);
-      var right1 = Assert.IsType<IntegerLiteralNode>(arg1.Right);
-      Assert.Equal(1L, left1.Value);
-      Assert.Equal(2L, right1.Value);
+      var left1 = Assert.IsType<NumberLiteralNode>(arg1.Left);
+      var right1 = Assert.IsType<NumberLiteralNode>(arg1.Right);
+      Assert.Equal(1.0, left1.Value);
+      Assert.Equal(2.0, right1.Value);
       
       // Second argument: obj.prop
       var arg2 = Assert.IsType<MemberExpressionNode>(callExpr.Arguments[1]);
