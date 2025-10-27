@@ -21,7 +21,7 @@ public class ProgramNode : AstNode
 
 public class LetStatementNode : DeclarationNode
 {
-    public IdentifierNode? Name { get; set; }
+    public PatternNode? Pattern { get; set; }
     public ExpressionNode? Value { get; set; }
     public string? TypeAnnotation { get; set; }
     public override string NodeType => "LetStatement";
@@ -29,7 +29,7 @@ public class LetStatementNode : DeclarationNode
 
 public class ConstStatementNode : DeclarationNode
 {
-    public IdentifierNode Name { get; set; }
+    public PatternNode Pattern { get; set; }
     public ExpressionNode Value { get; set; }
     public string? TypeAnnotation { get; set; }
     public override string NodeType => "ConstStatement";
@@ -37,10 +37,39 @@ public class ConstStatementNode : DeclarationNode
 
 public class VarStatementNode : DeclarationNode
 {
-    public IdentifierNode Name { get; set; }
+    public PatternNode Name { get; set; }
     public ExpressionNode? Value { get; set; }
     public string? TypeAnnotation { get; set; }
     public override string NodeType => "VarStatement";
+}
+
+public class ImportDeclaration : StatementNode
+{
+    public List<ImportSpecifier> Specifiers { get; set; } = new();
+    public string Source { get; set; }
+    public override string NodeType => "ImportDeclaration";
+}
+
+public class ExportDeclaration : StatementNode
+{
+    public StatementNode? Declaration { get; set; }
+    public List<ExportSpecifier> Specifiers { get; set; } = new();
+    public string? Source { get; set; }
+    public override string NodeType => "ExportDeclaration";
+}
+
+public class ImportSpecifier : AstNode
+{
+    public IdentifierNode Imported { get; set; }
+    public IdentifierNode Local { get; set; }
+    public override string NodeType => "ImportSpecifier";
+}
+
+public class ExportSpecifier : AstNode
+{
+    public IdentifierNode Local { get; set; }
+    public IdentifierNode Exported { get; set; }
+    public override string NodeType => "ExportSpecifier";
 }
 
 public class IfStatementNode : StatementNode
@@ -183,16 +212,10 @@ public class EOF : StatementNode
 }
 
 
-public class IntegerLiteralNode(string value) : ExpressionNode
-{
-    public long Value { get; set; } = long.Parse(value);
-    public override string NodeType => "IntegerLiteral";
-}
-
-public class FloatLiteralNode(double value) : ExpressionNode
+public class NumberLiteralNode(double value) : ExpressionNode
 {
     public double Value { get; set; } = value;
-    public override string NodeType => "FloatLiteral";
+    public override string NodeType => "NumberLiteral";
 }
 
 public class StringLiteralNode(string value) : ExpressionNode
@@ -447,10 +470,39 @@ public class SpreadElementNode : ExpressionNode
     public override string NodeType => "SpreadElement";
 }
 
-public class RestElementNode : ExpressionNode
+public class RestElementNode : PatternNode
 {
     public ExpressionNode Argument { get; set; }
     public override string NodeType => "RestElement";
+}
+
+public abstract class PatternNode : AstNode
+{
+}
+
+public class IdentifierPatternNode : PatternNode
+{
+    public string Name { get; set; }
+    public override string NodeType => "IdentifierPattern";
+}
+
+public class ArrayPatternNode : PatternNode
+{
+    public List<PatternNode?> Elements { get; set; } = new();
+    public override string NodeType => "ArrayPattern";
+}
+
+public class ObjectPatternNode : PatternNode
+{
+    public List<PropertyPatternNode> Properties { get; set; } = new();
+    public override string NodeType => "ObjectPattern";
+}
+
+public class PropertyPatternNode : AstNode
+{
+    public ExpressionNode? Key { get; set; }
+    public PatternNode Value { get; set; }
+    public override string NodeType => "PropertyPattern";
 }
 
 public class TypeAnnotationNode : AstNode

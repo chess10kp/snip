@@ -73,8 +73,7 @@ public class Environment
             var arg = args[0];
             var typeStr = arg.Type switch
             {
-                ValueType.Integer => "number",
-                ValueType.Float => "number",
+                ValueType.Number => "number",
                 ValueType.String => "string",
                 ValueType.Boolean => "boolean",
                 ValueType.Null => "object",
@@ -93,35 +92,31 @@ public class Environment
         // parseInt function
         Define("parseInt", Value.NativeFunction(new NativeFunctionValue("parseInt", args =>
         {
-            if (args.Count == 0) return Value.Integer(0);
+            if (args.Count == 0) return Value.Number(0.0);
             var str = args[0].ToString().Trim('"');
             if (long.TryParse(str, out var result))
             {
-                return Value.Integer(result);
+                return Value.Number((double)result);
             }
-            return Value.Integer(0);
+            return Value.Number(0.0);
         })));
 
         // Math object with some functions
         var mathObj = new Dictionary<string, Value>();
         mathObj["abs"] = Value.NativeFunction(new NativeFunctionValue("Math.abs", args =>
         {
-            if (args.Count == 0) return Value.Integer(0);
+            if (args.Count == 0) return Value.Number(0.0);
             var arg = args[0];
-            if (arg.Type == ValueType.Integer)
+            if (arg.Type == ValueType.Number)
             {
-                return Value.Integer(Math.Abs((long)arg.Data!));
+                return Value.Number(Math.Abs((double)arg.Data!));
             }
-            else if (arg.Type == ValueType.Float)
-            {
-                return Value.Float(Math.Abs((double)arg.Data!));
-            }
-            return Value.Integer(0);
+            return Value.Number(0.0);
         }));
 
         mathObj["random"] = Value.NativeFunction(new NativeFunctionValue("Math.random", args =>
         {
-            return Value.Float(new Random().NextDouble());
+            return Value.Number(new Random().NextDouble());
         }));
 
         Define("Math", Value.Object(mathObj));

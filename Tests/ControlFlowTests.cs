@@ -233,8 +233,10 @@ public class ControlFlowTests
         var letY = Assert.IsType<LetStatementNode>(blockStmt.Body[1]);
         var exprStmt = Assert.IsType<ExpressionStatementNode>(blockStmt.Body[2]);
         
-        Assert.Equal("x", letX.Name.Name);
-        Assert.Equal("y", letY.Name.Name);
+        var identPatternX = Assert.IsType<IdentifierPatternNode>(letX.Pattern);
+        Assert.Equal("x", identPatternX.Name);
+        var identPatternY = Assert.IsType<IdentifierPatternNode>(letY.Pattern);
+        Assert.Equal("y", identPatternY.Name);
         
         var addExpr = Assert.IsType<AddExpressionNode>(exprStmt.Expression);
         var left = Assert.IsType<IdentifierNode>(addExpr.Left);

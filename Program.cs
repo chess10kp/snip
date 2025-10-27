@@ -66,7 +66,6 @@ namespace Snip
 
         static void StartRepl()
         {
-            Console.WriteLine("Snip REPL v1.0");
             Console.WriteLine("Type '.help' for commands or '.exit' to quit");
 
             var evaluator = new Evaluator.Evaluator();

@@ -304,7 +304,8 @@ public class ParserTests
         var forStmt = Assert.IsType<ForStatementNode>(program.Statements[0]);
 
         var init = Assert.IsType<LetStatementNode>(forStmt.Initializer);
-        Assert.Equal("i", init.Name.Name);
+        var identPattern = Assert.IsType<IdentifierPatternNode>(init.Pattern);
+        Assert.Equal("i", identPattern.Name);
         Assert.Equal(0L, Assert.IsType<IntegerLiteralNode>(init.Value).Value);
 
         var condition = Assert.IsType<LessThanExpressionNode>(forStmt.Condition);
@@ -338,7 +339,8 @@ public class ParserTests
         // Assert
         Assert.Single(program.Statements);
         var varStmt = Assert.IsType<VarStatementNode>(program.Statements[0]);
-        Assert.Equal("x", varStmt.Name.Name);
+        var identPattern = Assert.IsType<IdentifierPatternNode>(varStmt.Name);
+        Assert.Equal("x", identPattern.Name);
         var value = Assert.IsType<IntegerLiteralNode>(varStmt.Value);
         Assert.Equal(42L, value.Value);
     }
@@ -357,7 +359,8 @@ public class ParserTests
         // Assert
         Assert.Single(program.Statements);
         var constStmt = Assert.IsType<ConstStatementNode>(program.Statements[0]);
-        Assert.Equal("PI", constStmt.Name.Name);
+        var identPattern = Assert.IsType<IdentifierPatternNode>(constStmt.Pattern);
+        Assert.Equal("PI", identPattern.Name);
         var value = Assert.IsType<FloatLiteralNode>(constStmt.Value);
         Assert.Equal(3.14, value.Value);
     }

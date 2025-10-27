@@ -19,11 +19,11 @@ public class EvaluatorTests
     }
 
     [Fact]
-    public void EvalIntegerLiteral_ShouldReturnIntegerValue()
+    public void EvalNumberLiteral_ShouldReturnNumberValue()
     {
         var result = Evaluate("42;");
-        Assert.Equal(Snip.Evaluator.ValueType.Integer, result.Type);
-        Assert.Equal(42L, result.Data);
+        Assert.Equal(Snip.Evaluator.ValueType.Number, result.Type);
+        Assert.Equal(42.0, result.Data);
     }
 
     [Fact]

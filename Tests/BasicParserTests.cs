@@ -93,7 +93,8 @@ public class BasicParserTests
       // Assert
       Assert.Single(program.Statements);
       var letStmt = Assert.IsType<LetStatementNode>(program.Statements[0]);
-      Assert.Equal("x", letStmt.Name.Name);
+      var identPattern = Assert.IsType<IdentifierPatternNode>(letStmt.Pattern);
+      Assert.Equal("x", identPattern.Name);
       var value = Assert.IsType<IntegerLiteralNode>(letStmt.Value);
       Assert.Equal(42L, value.Value);
    }
@@ -251,8 +252,10 @@ public class BasicParserTests
       var letY = Assert.IsType<LetStatementNode>(program.Statements[1]);
       var exprStmt = Assert.IsType<ExpressionStatementNode>(program.Statements[2]);
       
-      Assert.Equal("x", letX.Name.Name);
-      Assert.Equal("y", letY.Name.Name);
+      var identPatternX = Assert.IsType<IdentifierPatternNode>(letX.Pattern);
+      Assert.Equal("x", identPatternX.Name);
+      var identPatternY = Assert.IsType<IdentifierPatternNode>(letY.Pattern);
+      Assert.Equal("y", identPatternY.Name);
       
       var xValue = Assert.IsType<IntegerLiteralNode>(letX.Value);
       var yValue = Assert.IsType<IntegerLiteralNode>(letY.Value);

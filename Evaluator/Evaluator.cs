@@ -1,7 +1,10 @@
 using Snip.AST;
 
+using System.IO;
 using System.Linq;
 using System.Text;
+using Snip.Lexer;
+using Snip.Parser;
 
 namespace Snip.Evaluator;
 
@@ -12,8 +15,7 @@ public class Evaluator
         return node switch
         {
             ProgramNode program => EvalProgram(program, env),
-            IntegerLiteralNode intLit => Value.Integer(intLit.Value),
-            FloatLiteralNode floatLit => Value.Float(floatLit.Value),
+            NumberLiteralNode numLit => Value.Number(numLit.Value),
             StringLiteralNode strLit => Value.String(strLit.Value),
             TemplateLiteralNode templateLit => EvalTemplateLiteral(templateLit, env),
             BooleanLiteralNode boolLit => Value.Boolean(boolLit.Value),
@@ -35,9 +37,11 @@ public class Evaluator
              AndExpressionNode andExpr => EvalAnd(andExpr, env),
              OrExpressionNode orExpr => EvalOr(orExpr, env),
               AssignmentExpressionNode assignExpr => EvalAssignment(assignExpr, env),
-             LetStatementNode letStmt => EvalLet(letStmt, env),
-             VarStatementNode varStmt => EvalVar(varStmt, env),
-             ConstStatementNode constStmt => EvalConst(constStmt, env),
+              ImportDeclaration importDecl => EvalImportDeclaration(importDecl, env),
+              ExportDeclaration exportDecl => EvalExportDeclaration(exportDecl, env),
+              LetStatementNode letStmt => EvalLet(letStmt, env),
+              VarStatementNode varStmt => EvalVar(varStmt, env),
+              ConstStatementNode constStmt => EvalConst(constStmt, env),
              ExpressionStatementNode exprStmt => Eval(exprStmt.Expression, env),
             IfStatementNode ifStmt => EvalIf(ifStmt, env),
             ConditionalExpressionNode condExpr => EvalConditional(condExpr, env),
@@ -143,43 +147,42 @@ public class Evaluator
 
         var leftNum = ToNumber(left);
         var rightNum = ToNumber(right);
-        return Value.Float(leftNum + rightNum);
+        return Value.Number(leftNum + rightNum);
     }
 
     private Value EvalSubtract(Value left, Value right)
     {
         var leftNum = ToNumber(left);
         var rightNum = ToNumber(right);
-        return Value.Float(leftNum - rightNum);
+        return Value.Number(leftNum - rightNum);
     }
 
     private Value EvalMultiply(Value left, Value right)
     {
         var leftNum = ToNumber(left);
         var rightNum = ToNumber(right);
-        return Value.Float(leftNum * rightNum);
+        return Value.Number(leftNum * rightNum);
     }
 
     private Value EvalDivide(Value left, Value right)
     {
         var leftNum = ToNumber(left);
         var rightNum = ToNumber(right);
-        return Value.Float(leftNum / rightNum);
+        return Value.Number(leftNum / rightNum);
     }
 
     private Value EvalModulo(Value left, Value right)
     {
         var leftNum = ToNumber(left);
         var rightNum = ToNumber(right);
-        return Value.Float(leftNum % rightNum);
+        return Value.Number(leftNum % rightNum);
     }
 
     private double ToNumber(Value value)
     {
         return value.Type switch
         {
-            ValueType.Integer => (long)value.Data!,
-            ValueType.Float => (double)value.Data!,
+            ValueType.Number => (double)value.Data!,
             _ => throw new InvalidOperationException($"Cannot convert {value.Type} to number")
         };
     }
@@ -187,18 +190,16 @@ public class Evaluator
     private bool ValuesEqual(Value left, Value right)
     {
         // Handle numeric type coercion
-        if ((left.Type == ValueType.Integer || left.Type == ValueType.Float) &&
-            (right.Type == ValueType.Integer || right.Type == ValueType.Float))
+        if (left.Type == ValueType.Number && right.Type == ValueType.Number)
         {
-            return ToNumber(left) == ToNumber(right);
+            return (double)left.Data! == (double)right.Data!;
         }
 
         if (left.Type != right.Type) return false;
 
         return left.Type switch
         {
-            ValueType.Integer => (long)left.Data! == (long)right.Data!,
-            ValueType.Float => (double)left.Data! == (double)right.Data!,
+            ValueType.Number => (double)left.Data! == (double)right.Data!,
             ValueType.String => (string)left.Data! == (string)right.Data!,
             ValueType.Boolean => (bool)left.Data! == (bool)right.Data!,
             ValueType.Null => true,
@@ -304,31 +305,98 @@ public class Evaluator
 
     private Value EvalLet(LetStatementNode node, Environment env)
     {
-        Value? value = null;
         if (node.Value != null)
         {
-            value = Eval(node.Value, env);
+            var value = Eval(node.Value, env);
+            DestructurePattern(node.Pattern, value, env);
         }
-        env.Define(node.Name!.Name, value ?? Value.Undefined());
+        else
+        {
+            DestructurePattern(node.Pattern, Value.Undefined(), env);
+        }
         return Value.Undefined();
     }
 
     private Value EvalVar(VarStatementNode node, Environment env)
     {
-        Value? value = null;
         if (node.Value != null)
         {
-            value = Eval(node.Value, env);
+            var value = Eval(node.Value, env);
+            DestructurePattern(node.Name, value, env);
         }
-        env.Define(node.Name.Name, value ?? Value.Undefined());
+        else
+        {
+            DestructurePattern(node.Name, Value.Undefined(), env);
+        }
         return Value.Undefined();
     }
 
     private Value EvalConst(ConstStatementNode node, Environment env)
     {
         var value = Eval(node.Value, env);
-        env.Define(node.Name.Name, value);
+        DestructurePattern(node.Pattern, value, env);
         return Value.Undefined();
+    }
+
+    private void DestructurePattern(PatternNode pattern, Value value, Environment env)
+    {
+        switch (pattern)
+        {
+            case IdentifierPatternNode identPattern:
+                env.Define(identPattern.Name, value);
+                break;
+            case ArrayPatternNode arrayPattern:
+                if (value.Type != ValueType.Array)
+                {
+                    throw new InvalidOperationException("Cannot destructure non-array value with array pattern");
+                }
+                var arr = (List<Value>)value.Data!;
+                for (int i = 0; i < arrayPattern.Elements.Count; i++)
+                {
+                    var elementPattern = arrayPattern.Elements[i];
+                    if (elementPattern != null)
+                    {
+                        if (elementPattern is RestElementNode rest)
+                        {
+                            // Handle rest element
+                            var restArray = arr.Skip(i).ToList();
+                            DestructurePattern(new IdentifierPatternNode { Name = ((IdentifierNode)rest.Argument).Name }, Value.Array(restArray), env);
+                            break; // Rest must be last
+                        }
+                        else
+                        {
+                            var elementValue = i < arr.Count ? arr[i] : Value.Undefined();
+                            DestructurePattern(elementPattern, elementValue, env);
+                        }
+                    }
+                }
+                break;
+            case ObjectPatternNode objectPattern:
+                if (value.Type != ValueType.Object)
+                {
+                    throw new InvalidOperationException("Cannot destructure non-object value with object pattern");
+                }
+                var obj = (Dictionary<string, Value>)value.Data!;
+                foreach (var property in objectPattern.Properties)
+                {
+                    if (property.Key is IdentifierNode ident)
+                    {
+                        var key = ident.Name;
+                        var propValue = obj.TryGetValue(key, out var val) ? val : Value.Undefined();
+                        DestructurePattern(property.Value, propValue, env);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Computed property names not supported in destructuring yet");
+                    }
+                }
+                break;
+            case RestElementNode rest:
+                // This should be handled in the array pattern case
+                throw new InvalidOperationException("Rest element not in valid context");
+            default:
+                throw new InvalidOperationException($"Unsupported pattern type: {pattern.NodeType}");
+        }
     }
 
     private Value EvalIf(IfStatementNode node, Environment env)
@@ -534,20 +602,17 @@ public class Evaluator
             "!" => Value.Boolean(!IsTruthy(argument)),
             "-" => argument.Type switch
             {
-                ValueType.Integer => Value.Integer(-(long)argument.Data!),
-                ValueType.Float => Value.Float(-(double)argument.Data!),
+                ValueType.Number => Value.Number(-(double)argument.Data!),
                 _ => throw new InvalidOperationException($"Cannot apply unary minus to {argument.Type}")
             },
             "+" => argument.Type switch
             {
-                ValueType.Integer => argument,
-                ValueType.Float => argument,
+                ValueType.Number => argument,
                 _ => throw new InvalidOperationException($"Cannot apply unary plus to {argument.Type}")
             },
             "typeof" => argument.Type switch
             {
-                ValueType.Integer => Value.String("number"),
-                ValueType.Float => Value.String("number"),
+                ValueType.Number => Value.String("number"),
                 ValueType.String => Value.String("string"),
                 ValueType.Boolean => Value.String("boolean"),
                 ValueType.Null => Value.String("object"),
@@ -869,9 +934,9 @@ public class Evaluator
             if (node.Computed)
             {
                 var indexValue = Eval(node.Property, env);
-                if (indexValue.Type == ValueType.Integer || indexValue.Type == ValueType.Float)
+                if (indexValue.Type == ValueType.Number)
                 {
-                    var num = indexValue.Type == ValueType.Integer ? (double)(int)indexValue.Data! : (double)indexValue.Data!;
+                    var num = (double)indexValue.Data!;
                     var index = (int)num;
                     var arr = (List<Value>)obj.Data!;
                     if (index >= 0 && index < arr.Count)
@@ -894,7 +959,7 @@ public class Evaluator
                 if (((IdentifierNode)node.Property).Name == "length")
                 {
                     var arr = (List<Value>)obj.Data!;
-                    return Value.Float(arr.Count);
+                    return Value.Number((double)arr.Count);
                 }
                 return Value.Undefined();
             }
@@ -1221,5 +1286,33 @@ public class Evaluator
         }
 
         return result;
+    }
+
+    private Value EvalImportDeclaration(ImportDeclaration node, Environment env)
+    {
+        try
+        {
+            var source = File.ReadAllText(node.Source.Trim('"'));
+            var lexer = new Snip.Lexer.Lexer(source);
+            lexer.Tokenize();
+            var parser = new Snip.Parser.Parser(lexer);
+            var program = parser.Parse();
+            Eval(program, env);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to import {node.Source}: {ex.Message}");
+        }
+        return Value.Undefined();
+    }
+
+    private Value EvalExportDeclaration(ExportDeclaration node, Environment env)
+    {
+        if (node.Declaration != null)
+        {
+            Eval(node.Declaration, env);
+        }
+        // TODO: handle specifiers and re-exports
+        return Value.Undefined();
     }
 }

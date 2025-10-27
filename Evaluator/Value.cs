@@ -118,8 +118,7 @@ public class NativeFunctionValue
 
 public enum ValueType
 {
-    Integer,
-    Float,
+    Number,
     String,
     Boolean,
     Null,
@@ -148,8 +147,7 @@ public class Value
     }
 
     // Convenience constructors
-    public static Value Integer(long value) => new(ValueType.Integer, value);
-    public static Value Float(double value) => new(ValueType.Float, value);
+    public static Value Number(double value) => new(ValueType.Number, value);
     public static Value String(string value) => new(ValueType.String, value);
     public static Value Boolean(bool value) => new(ValueType.Boolean, value);
     public static Value Null() => new(ValueType.Null);
@@ -169,8 +167,7 @@ public class Value
     {
         return Type switch
         {
-            ValueType.Integer => Data?.ToString() ?? "0",
-            ValueType.Float => Data?.ToString() ?? "0.0",
+            ValueType.Number => Data?.ToString() ?? "0.0",
             ValueType.String => $"\"{Data}\"",
             ValueType.Boolean => Data?.ToString() ?? "false",
             ValueType.Null => "null",

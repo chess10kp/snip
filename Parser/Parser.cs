@@ -358,86 +358,70 @@ TokenType.Equal => new EqualExpressionNode(left, right),
 
     private LetStatementNode ParseLetStatement()
     {
-       // let name = expr
-       var node = new LetStatementNode();
-       var tok = _peek();
-        if (tok == null || tok.Type != TokenType.Let)
-           ThrowParsingError("Expected let");
+        // let pattern = expr
+        var node = new LetStatementNode();
+        var tok = _peek();
+         if (tok == null || tok.Type != TokenType.Let)
+            ThrowParsingError("Expected let");
+
+         _next();
+         node.Pattern = ParsePattern();
+         tok = _peek();
+         if (tok is not { Type: TokenType.Assign })
+            ThrowParsingError("Expected =");
+
+         _next();
+         node.Value = ParseExpression();
+
+         tok = _peek();
+         if (tok is not { Type:  TokenType.Semicolon}) ThrowParsingError("Expected semicolon in assignment");
+        _next();
+        return node;
+    }
+
+    private VarStatementNode ParseVarStatement()
+    {
+        var node = new VarStatementNode();
+        var tok = _peek();
+        if (tok == null || tok.Type != TokenType.Var)
+           throw new ParsingError("Expected var");
 
         _next();
-        tok = _peek();
-        if (tok is not { Type: TokenType.Identifier })
-           ThrowParsingError("Expected identifier");
-
-        node.Name = new IdentifierNode(tok.Value);
-        _next();
+        node.Name = ParsePattern();
         tok = _peek();
         if (tok is not { Type: TokenType.Assign })
-           ThrowParsingError("Expected =");
+           throw new ParsingError("Expected =");
 
         _next();
         node.Value = ParseExpression();
 
         tok = _peek();
-        if (tok is not { Type:  TokenType.Semicolon}) ThrowParsingError("Expected semicolon in assignment");
-       _next();
-       return node;
-    }
-
-    private VarStatementNode ParseVarStatement()
-    {
-       // var name = expr
-       var node = new VarStatementNode();
-       var tok = _peek();
-       if (tok == null || tok.Type != TokenType.Var)
-          throw new ParsingError("Expected var");
-
-       _next();
-       tok = _peek();
-       if (tok is not { Type: TokenType.Identifier })
-          throw new ParsingError("Expected identifier");
-       node.Name = new IdentifierNode(tok.Value);
-
-       _next();
-       tok = _peek();
-       if (tok is not { Type: TokenType.Assign })
-          throw new ParsingError("Expected =");
-
-       _next();
-       node.Value = ParseExpression();
-
-       tok = _peek();
-       if (tok is not { Type:  TokenType.Semicolon}) throw new ParsingError("Expected semicolon in assignment");
-       _next();
-       return node;
+        if (tok is not { Type:  TokenType.Semicolon}) throw new ParsingError("Expected semicolon in assignment");
+        _next();
+        return node;
     }
 
     private ConstStatementNode ParseConstStatement()
     {
-       // const name = expr
-       var node = new ConstStatementNode();
-       var tok = _peek();
-       if (tok == null || tok.Type != TokenType.Const)
-          throw new ParsingError("Expected const");
+        // const pattern = expr
+        var node = new ConstStatementNode();
+        var tok = _peek();
+        if (tok == null || tok.Type != TokenType.Const)
+           throw new ParsingError("Expected const");
 
-       _next();
-       tok = _peek();
-       if (tok is not { Type: TokenType.Identifier })
-          throw new ParsingError("Expected identifier");
-       node.Name = new IdentifierNode(tok.Value);
+        _next();
+        node.Pattern = ParsePattern();
+        tok = _peek();
+        if (tok is not { Type: TokenType.Assign })
+           throw new ParsingError("Expected =");
 
-       _next();
-       tok = _peek();
-       if (tok is not { Type: TokenType.Assign })
-          throw new ParsingError("Expected =");
+        _next();
+        node.Value = ParseExpression();
 
-       _next();
-       node.Value = ParseExpression();
-
-       tok = _peek();
-       if (tok is not { Type:  TokenType.Semicolon}) throw new ParsingError("Expected semicolon in assignment");
-       _next();
-       return node;
+        tok = _peek();
+        if (tok is not { Type:  TokenType.Semicolon}) throw new ParsingError("Expected semicolon in assignment");
+        _next();
+        return node;
     }
 
     private FunctionDeclarationNode ParseFunctionDeclaration()
@@ -796,43 +780,152 @@ node.Value = ParseExpression();
       return new ObjectExpressionNode(properties);
    }
 
-   private PropertyNode ParseProperty()
-   {
-      var tok = _peek();
-      if (tok is not { Type: TokenType.String })
-         throw new ParsingError("Expected string");
-      _next();
-      var key = tok.Value;
-      
-      // Handle colon separator
-      if (_peek()?.Type == TokenType.Colon)
-      {
-         _next(); // Consume ':'
-      }
-      
-      var value = ParseExpression();
-      return new PropertyNode(key, value);
-   }
+    private PropertyNode ParseProperty()
+    {
+       var tok = _peek();
+       string key;
+       if (tok?.Type == TokenType.String)
+       {
+          _next();
+          key = tok.Value;
+       }
+       else if (tok?.Type == TokenType.Identifier)
+       {
+          _next();
+          key = tok.Value;
+       }
+       else
+       {
+          throw new ParsingError("Expected string or identifier for property key");
+       }
 
-   private IdentifierNode ParseIdentifierExpression()
-   {
-      var tok = _peek();
-      if (tok is not { Type: TokenType.Identifier })
-         throw new ParsingError("Expected identifier");
-      _next();
-      return new IdentifierNode(tok.Value);
-   }
+       // Handle colon separator
+       if (_peek()?.Type == TokenType.Colon)
+       {
+          _next(); // Consume ':'
+       }
+
+       var value = ParseExpression();
+       return new PropertyNode(key, value);
+    }
+
+    private IdentifierNode ParseIdentifierExpression()
+    {
+       var tok = _peek();
+       if (tok is not { Type: TokenType.Identifier })
+          throw new ParsingError("Expected identifier");
+       _next();
+       return new IdentifierNode(tok.Value);
+    }
+
+    private PatternNode ParsePattern()
+    {
+        var tok = _peek();
+        if (tok?.Type == TokenType.LeftBracket)
+        {
+            return ParseArrayPattern();
+        }
+        else if (tok?.Type == TokenType.LeftBrace)
+        {
+            return ParseObjectPattern();
+        }
+        else if (tok?.Type == TokenType.Identifier)
+        {
+            _next();
+            return new IdentifierPatternNode { Name = tok.Value };
+        }
+        else
+        {
+            throw new ParsingError("Expected pattern (identifier, array, or object)");
+        }
+    }
+
+    private ArrayPatternNode ParseArrayPattern()
+    {
+        if (_peek()?.Type != TokenType.LeftBracket) throw new ParsingError("Expected '['");
+        _next();
+        var elements = new List<PatternNode?>();
+
+        while (_peek() is not { Type: TokenType.RightBracket })
+        {
+            if (_peek()?.Type == TokenType.Spread)
+            {
+                _next(); // consume ...
+                var argument = ParsePattern();
+                if (argument is IdentifierPatternNode ident)
+                {
+                    elements.Add(new RestElementNode { Argument = new IdentifierNode(ident.Name) });
+                }
+                else
+                {
+                    throw new ParsingError("Rest element must be an identifier");
+                }
+            }
+            else if (_peek()?.Type == TokenType.Comma)
+            {
+                elements.Add(null); // empty slot
+                _next();
+            }
+            else
+            {
+                var element = ParsePattern();
+                elements.Add(element);
+                if (_peek()?.Type == TokenType.Comma)
+                {
+                    _next();
+                }
+            }
+        }
+
+        _next(); // consume ]
+        return new ArrayPatternNode { Elements = elements };
+    }
+
+    private ObjectPatternNode ParseObjectPattern()
+    {
+        if (_peek()?.Type != TokenType.LeftBrace) throw new ParsingError("Expected '{'");
+        _next();
+        var properties = new List<PropertyPatternNode>();
+
+        while (_peek() is not { Type: TokenType.RightBrace })
+        {
+            var tok = _peek();
+            if (tok?.Type != TokenType.Identifier)
+            {
+                throw new ParsingError("Expected identifier in object pattern");
+            }
+            var ident = new IdentifierNode(tok.Value);
+            _next();
+
+            if (_peek()?.Type == TokenType.Colon)
+            {
+                _next(); // consume :
+                var value = ParsePattern();
+                properties.Add(new PropertyPatternNode { Key = ident, Value = value });
+            }
+            else
+            {
+                // Shorthand: {x} means {x: x}
+                properties.Add(new PropertyPatternNode { Key = ident, Value = new IdentifierPatternNode { Name = ident.Name } });
+            }
+
+            if (_peek()?.Type == TokenType.Comma)
+            {
+                _next();
+            }
+        }
+
+        _next(); // consume }
+        return new ObjectPatternNode { Properties = properties };
+    }
 
     private ExpressionNode ParseNumberExpression()
     {
-       var tok = _peek();
-       if (tok is not { Type: TokenType.Number })
-          throw new ParsingError("Expected number");
-       _next();
-       if (tok.Value.Contains('.'))
-          return new FloatLiteralNode(double.Parse(tok.Value));
-       else
-          return new IntegerLiteralNode(tok.Value);
+        var tok = _peek();
+        if (tok is not { Type: TokenType.Number })
+           throw new ParsingError("Expected number");
+        _next();
+        return new NumberLiteralNode(double.Parse(tok.Value));
     }
 
     private StringLiteralNode ParseStringExpression()
@@ -885,19 +978,15 @@ node.Value = ParseExpression();
                var remaining = part.Substring(braceIndex + 1);
 
                // For simple cases, parse as identifier or number
-               ExpressionNode expr;
-               if (int.TryParse(expressionStr, out var num))
-               {
-                   expr = new IntegerLiteralNode(expressionStr);
-               }
-               else if (double.TryParse(expressionStr, out var dbl))
-               {
-                   expr = new FloatLiteralNode(dbl);
-               }
-               else
-               {
-                   expr = new IdentifierNode(expressionStr);
-               }
+                ExpressionNode expr;
+                if (double.TryParse(expressionStr, out var dbl))
+                {
+                    expr = new NumberLiteralNode(dbl);
+                }
+                else
+                {
+                    expr = new IdentifierNode(expressionStr);
+                }
 
                templateLiteral.Expressions.Add(expr);
 
@@ -1464,36 +1553,138 @@ node.Cases = new List<CaseNode>();
        return node;
     }
 
-   private StatementNode? ParseSemicolon()
-   {
-      _next();
-      return null;
-   }
+    private StatementNode? ParseSemicolon()
+    {
+       _next();
+       return null;
+    }
+
+    private ImportDeclaration ParseImportDeclaration()
+    {
+        var node = new ImportDeclaration();
+        _next(); // consume import
+
+        if (_peek()?.Type == TokenType.LeftBrace)
+        {
+            _next(); // consume {
+            while (_peek()?.Type != TokenType.RightBrace)
+            {
+                var specifier = ParseImportSpecifier();
+                node.Specifiers.Add(specifier);
+                if (_peek()?.Type == TokenType.Comma)
+                    _next(); // consume ,
+            }
+            _next(); // consume }
+        }
+
+        if (_peek()?.Type != TokenType.From)
+            throw new ParsingError("Expected 'from' in import statement");
+        _next(); // consume from
+
+        if (_peek()?.Type != TokenType.String)
+            throw new ParsingError("Expected string after 'from'");
+        node.Source = ((StringLiteralNode)ParseStringExpression()).Value;
+        _next(); // consume string
+
+        if (_peek()?.Type != TokenType.Semicolon)
+            throw new ParsingError("Expected semicolon after import");
+        _next(); // consume ;
+
+        return node;
+    }
+
+    private ImportSpecifier ParseImportSpecifier()
+    {
+        var imported = ParseIdentifierExpression();
+        var local = imported;
+        if (_peek()?.Type == TokenType.As)
+        {
+            _next(); // consume as
+            local = ParseIdentifierExpression();
+        }
+        return new ImportSpecifier { Imported = imported, Local = local };
+    }
+
+    private ExportDeclaration ParseExportDeclaration()
+    {
+        var node = new ExportDeclaration();
+        _next(); // consume export
+
+        var tok = _peek();
+        if (tok?.Type == TokenType.Let || tok?.Type == TokenType.Var || tok?.Type == TokenType.Const || tok?.Type == TokenType.Function || tok?.Type == TokenType.Class)
+        {
+            node.Declaration = ParseStatement(tok);
+        }
+        else if (tok?.Type == TokenType.LeftBrace)
+        {
+            _next(); // consume {
+            while (_peek()?.Type != TokenType.RightBrace)
+            {
+                var specifier = ParseExportSpecifier();
+                node.Specifiers.Add(specifier);
+                if (_peek()?.Type == TokenType.Comma)
+                    _next(); // consume ,
+            }
+            _next(); // consume }
+            if (_peek()?.Type == TokenType.From)
+            {
+                _next(); // consume from
+                if (_peek()?.Type != TokenType.String)
+                    throw new ParsingError("Expected string after 'from'");
+                node.Source = ((StringLiteralNode)ParseStringExpression()).Value;
+                _next(); // consume string
+            }
+        }
+        else
+        {
+            throw new ParsingError("Invalid export statement");
+        }
+
+        if (_peek()?.Type != TokenType.Semicolon)
+            throw new ParsingError("Expected semicolon after export");
+        _next(); // consume ;
+
+        return node;
+    }
+
+    private ExportSpecifier ParseExportSpecifier()
+    {
+        var local = ParseIdentifierExpression();
+        var exported = local;
+        if (_peek()?.Type == TokenType.As)
+        {
+            _next(); // consume as
+            exported = ParseIdentifierExpression();
+        }
+        return new ExportSpecifier { Local = local, Exported = exported };
+    }
 
    private StatementNode? ParseStatement(Token tok)
    {
-       return tok.Type switch
-       {
-           TokenType.Let => ParseLetStatement(),
-           TokenType.Var => ParseVarStatement(),
-           TokenType.Const => ParseConstStatement(),
-           TokenType.Function => ParseFunctionDeclaration(),
-           TokenType.Class => ParseClassDeclaration(),
-          TokenType.For => ParseForStatement(),
-          TokenType.Do => ParseDoWhileStatement(),
-           TokenType.Throw => ParseThrowStatement(),
-           TokenType.Try => ParseTryStatement(),
-           TokenType.Return => ParseReturnStatement(),
-          TokenType.Newline => ParseNewLine(),
-          TokenType.Break => ParseBreakStatement(),
-          TokenType.Continue => ParseContinueStatement(),
-          TokenType.If => ParseIfStatement(),
-          TokenType.While => ParseWhileStatement(),
-          TokenType.Semicolon => ParseSemicolon(),
- TokenType.Switch => ParseSwitchStatement(),
-           TokenType.LeftBrace => ParseBlockStatement(),
-           _ => ParseExpressionStatement()
-       };
+        return tok.Type switch
+        {
+            TokenType.Import => ParseImportDeclaration(),
+            TokenType.Export => ParseExportDeclaration(),
+            TokenType.Let => ParseLetStatement(),
+            TokenType.Var => ParseVarStatement(),
+            TokenType.Const => ParseConstStatement(),
+            TokenType.Function => ParseFunctionDeclaration(),
+            TokenType.Class => ParseClassDeclaration(),
+           TokenType.For => ParseForStatement(),
+           TokenType.Do => ParseDoWhileStatement(),
+            TokenType.Throw => ParseThrowStatement(),
+            TokenType.Try => ParseTryStatement(),
+            TokenType.Return => ParseReturnStatement(),
+           TokenType.Newline => ParseNewLine(),
+           TokenType.Break => ParseBreakStatement(),
+           TokenType.Continue => ParseContinueStatement(),
+           TokenType.If => ParseIfStatement(),
+           TokenType.While => ParseWhileStatement(),
+           TokenType.Semicolon => ParseSemicolon(),
+  TokenType.Switch => ParseSwitchStatement(),
+            TokenType.LeftBrace => ParseBlockStatement(),
+            _ => ParseExpressionStatement()
+        };
    }
 
    private ExpressionStatementNode ParseExpressionStatement()
@@ -1550,12 +1741,12 @@ node.Cases = new List<CaseNode>();
             }
             break;
 
-         case LetStatementNode letNode:
-            if (letNode.Name != null)
-               PrintNode(letNode.Name, indent + 1);
-            if (letNode.Value != null)
-               PrintNode(letNode.Value, indent + 1);
-            break;
+          case LetStatementNode letNode:
+             if (letNode.Pattern != null)
+                PrintNode(letNode.Pattern, indent + 1);
+             if (letNode.Value != null)
+                PrintNode(letNode.Value, indent + 1);
+             break;
 
          case AddExpressionNode addNode:
             PrintNode(addNode.Left, indent + 1);
@@ -1789,26 +1980,50 @@ node.Cases = new List<CaseNode>();
             PrintNode(exportNode.Declaration, indent + 1);
             break;
 
-         case InterfaceDeclarationNode interfaceNode:
-            PrintNode(interfaceNode.Name, indent + 1);
-            foreach (var prop in interfaceNode.Properties)
-            {
-               PrintNode(prop, indent + 1);
-            }
-            foreach (var extend in interfaceNode.Extends)
-            {
-               PrintNode(extend, indent + 1);
-            }
-            break;
-      }
+          case InterfaceDeclarationNode interfaceNode:
+             PrintNode(interfaceNode.Name, indent + 1);
+             foreach (var prop in interfaceNode.Properties)
+             {
+                PrintNode(prop, indent + 1);
+             }
+             foreach (var extend in interfaceNode.Extends)
+             {
+                PrintNode(extend, indent + 1);
+             }
+             break;
+
+          case ArrayPatternNode arrayPatternNode:
+             foreach (var element in arrayPatternNode.Elements)
+             {
+                if (element != null)
+                   PrintNode(element, indent + 1);
+             }
+             break;
+
+          case ObjectPatternNode objectPatternNode:
+             foreach (var prop in objectPatternNode.Properties)
+             {
+                PrintNode(prop, indent + 1);
+             }
+             break;
+
+          case PropertyPatternNode propertyPatternNode:
+             if (propertyPatternNode.Key != null)
+                PrintNode(propertyPatternNode.Key, indent + 1);
+             PrintNode(propertyPatternNode.Value, indent + 1);
+             break;
+
+          case IdentifierPatternNode identifierPatternNode:
+             Console.WriteLine($"{new string(' ', indent * 2)}IdentifierPattern: {identifierPatternNode.Name}");
+             break;
+       }
    }
 
    private string GetNodeDetails(AstNode node)
    {
       return node switch
       {
-         IntegerLiteralNode intNode => $" ({intNode.Value})",
-         FloatLiteralNode floatNode => $" ({floatNode.Value})",
+          NumberLiteralNode numNode => $" ({numNode.Value})",
          StringLiteralNode strNode => $" (\"{strNode.Value}\")",
          BooleanLiteralNode boolNode => $" ({boolNode.Value})",
          IdentifierNode idNode => $" ({idNode.Name})",
