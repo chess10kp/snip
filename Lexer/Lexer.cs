@@ -55,6 +55,7 @@ public enum TokenType
     Semicolon, // ;
     Comma, // ,
     Dot, // .
+    OptionalChain, // ?.
     Spread, // ...
     Colon, // :
     QuestionMark, // ?
@@ -297,16 +298,23 @@ public class Lexer
                  {
                      AddToken(TokenType.Dot, ".");
                  }
+                  break;
+             case ';':
+                 AddToken(TokenType.Semicolon, ";");
                  break;
-            case ';':
-                AddToken(TokenType.Semicolon, ";");
-                break;
-            case ':':
-                AddToken(TokenType.Colon, ":");
-                break;
-            case '?':
-                AddToken(TokenType.QuestionMark, "?");
-                break;
+             case ':':
+                 AddToken(TokenType.Colon, ":");
+                 break;
+             case '?':
+                 if (Match('.'))
+                 {
+                     AddToken(TokenType.OptionalChain, "?.");
+                 }
+                 else
+                 {
+                     AddToken(TokenType.QuestionMark, "?");
+                 }
+                 break;
             case '~':
                 AddToken(TokenType.BitwiseNot, "~");
                 break;

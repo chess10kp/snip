@@ -426,6 +426,7 @@ public class MemberExpressionNode(ExpressionNode obj, ExpressionNode p) : Expres
     public ExpressionNode Object { get; set; } = obj;
     public ExpressionNode Property { get; set; } = p;
     public bool Computed { get; set; }
+    public bool Optional { get; set; }
     public override string NodeType => "MemberExpression";
 }
 

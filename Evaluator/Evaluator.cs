@@ -929,6 +929,11 @@ public class Evaluator
 
         var obj = Eval(node.Object, env);
 
+        if (node.Optional && (obj.Type == ValueType.Null || obj.Type == ValueType.Undefined))
+        {
+            return Value.Undefined();
+        }
+
         if (obj.Type == ValueType.Array)
         {
             if (node.Computed)

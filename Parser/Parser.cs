@@ -177,8 +177,9 @@ public class Parser
               TokenType.Or => ParseBinaryExpression(left, operatorType),
               TokenType.And => ParseBinaryExpression(left, operatorType),
               TokenType.LeftParen => ParseCallExpression(left),
-             TokenType.Dot => ParseMemberExpression(left),
-             TokenType.LeftBracket => ParseArrayAccess(left),
+              TokenType.Dot => ParseMemberExpression(left),
+              TokenType.OptionalChain => ParseOptionalMemberExpression(left),
+              TokenType.LeftBracket => ParseArrayAccess(left),
             _ => throw new ParsingError($"Unexpected infix operator: {operatorType}")
          };
      }
@@ -315,14 +316,26 @@ TokenType.Equal => new EqualExpressionNode(left, right),
 
     private ExpressionNode ParseMemberExpression(ExpressionNode obj)
     {
-       _next(); // Consume '.'
+        _next(); // Consume '.'
 
-       var tok = _peek();
-       if (tok is not { Type: TokenType.Identifier })
-          throw new ParsingError("Expected identifier after .");
+        var tok = _peek();
+        if (tok is not { Type: TokenType.Identifier })
+           throw new ParsingError("Expected identifier after .");
 
-       _next();
-       return new MemberExpressionNode(obj, new IdentifierNode(tok.Value));
+        _next();
+        return new MemberExpressionNode(obj, new IdentifierNode(tok.Value));
+    }
+
+    private ExpressionNode ParseOptionalMemberExpression(ExpressionNode obj)
+    {
+        _next(); // Consume '?.'
+
+        var tok = _peek();
+        if (tok is not { Type: TokenType.Identifier })
+           throw new ParsingError("Expected identifier after ?.");
+
+        _next();
+        return new MemberExpressionNode(obj, new IdentifierNode(tok.Value)) { Optional = true };
     }
 
     private ExpressionNode ParseArrayAccess(ExpressionNode array)
