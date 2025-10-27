@@ -1,4 +1,3 @@
-using Xunit;
 using Snip.AST;
 using Snip.Lexer;
 using Snip.Parser;

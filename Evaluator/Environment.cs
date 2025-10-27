@@ -27,7 +27,7 @@ public class Environment
             return _parent.Get(name);
         }
 
-        throw new Exception($"Undefined variable: {name}");
+        throw new Exception($"ReferenceError: '{name}' is not defined");
     }
 
     public void Assign(string name, Value value)

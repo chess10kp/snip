@@ -1,4 +1,3 @@
-using System;
 using Snip.CLI;
 using snip.CLI;
 using Snip.Lexer;
@@ -22,14 +21,9 @@ namespace Snip
                 Console.WriteLine(e.Message);
                 return;
             }
-            catch (InvalidArgumentException e)
+            catch (snip.CLI.InvalidArgumentException e)
             {
                 Console.WriteLine(e.Message);
-                return;
-            }
-            catch (Snip.Parser.ParsingError e)
-            {
-                Console.WriteLine($"Parse Error: {e.Message}");
                 return;
             }
 
@@ -37,25 +31,30 @@ namespace Snip
             {
                 // File mode
                 Console.WriteLine("Starting Compilation");
-                var lexer = new Lexer.Lexer(source);
-                lexer.Tokenize();
-
-                var parser = new Parser.Parser(lexer);
-                var program = parser.Parse();
-
-                var evaluator = new Evaluator.Evaluator();
-                var env = new Evaluator.Environment();
-                env.InitializeBuiltins();
                 try
                 {
-                    var result = evaluator.Eval(program, env);
-                    Console.WriteLine(result);
+                    var lexer = new Lexer.Lexer(source);
+                    lexer.Tokenize();
+
+                    var parser = new Parser.Parser(lexer);
+                    var program = parser.Parse();
+
+                    var evaluator = new Evaluator.Evaluator();
+                    var env = new Evaluator.Environment();
+                    env.InitializeBuiltins();
+
+                    // Evaluate the program
+                    evaluator.Eval(program, env);
+                    Console.Write("Finish Execution");
+                }
+                catch (Snip.Parser.ParsingError e)
+                {
+                    Console.WriteLine($"🔴 Parse Error: {e.Message}");
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Runtime Error: {e.Message}");
+                    Console.WriteLine($"💥 Runtime Error: {e.Message}");
                 }
-                Console.Write("Finish Execution");
             }
             else
             {
@@ -115,11 +114,11 @@ namespace Snip
                 }
                 catch (Snip.Parser.ParsingError e)
                 {
-                    Console.WriteLine($"Parse Error: {e.Message}");
+                    Console.WriteLine($"🔴 Parse Error: {e.Message}");
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Runtime Error: {e.Message}");
+                    Console.WriteLine($"💥 Runtime Error: {e.Message}");
                 }
             }
         }

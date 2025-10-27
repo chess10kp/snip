@@ -27,9 +27,59 @@ F -> (E) | NUMBER | VAR
    ```
 
 3. **Run the application:**
-   ```bash
-   dotnet run
-   ```
+    ```bash
+    dotnet run
+    ```
+
+### Examples
+
+Snip supports variables, functions, control flow, objects, arrays, and more. Here are some examples:
+
+#### Variables and Arithmetic
+```snip
+let x = 5;
+let y = 10;
+x + y;  // Output: 15
+```
+
+#### Functions
+```snip
+function add(a, b) {
+    return a + b;
+}
+add(3, 4);  // Output: 7
+```
+
+#### Control Flow
+```snip
+let x = 5;
+if (x > 3) {
+    "greater";
+} else {
+    "less";
+}  // Output: "greater"
+```
+
+#### Objects
+```snip
+let person = { name: "John", age: 30 };
+person.name;  // Output: "John"
+```
+
+#### Arrays
+```snip
+let arr = [1, 2, 3];
+arr[0];  // Output: 1
+```
+
+#### Loops
+```snip
+let sum = 0;
+for (let i = 0; i < 5; i = i + 1) {
+    sum = sum + i;
+}
+sum;  // Output: 10
+```
 
 ### 1. Lexer (Lexical Analysis)
 

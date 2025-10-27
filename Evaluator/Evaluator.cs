@@ -1,5 +1,4 @@
 using Snip.AST;
-
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,6 +6,8 @@ using Snip.Lexer;
 using Snip.Parser;
 
 namespace Snip.Evaluator;
+
+
 
 public class Evaluator
 {
@@ -68,7 +69,7 @@ public class Evaluator
              ObjectExpressionNode objExpr => EvalObject(objExpr, env),
               ArrayExpressionNode arrExpr => EvalArray(arrExpr, env),
               SpreadElementNode spreadElem => EvalSpread(spreadElem, env),
-              _ => throw new NotImplementedException($"Evaluation not implemented for {node.NodeType}")
+               _ => throw new NotImplementedException($"Evaluation not implemented for {node.NodeType}")
         };
     }
 
@@ -183,7 +184,8 @@ public class Evaluator
         return value.Type switch
         {
             ValueType.Number => (double)value.Data!,
-            _ => throw new InvalidOperationException($"Cannot convert {value.Type} to number")
+            ValueType.Array => (double)((List<Value>)value.Data!).Count,
+             _ => throw new InvalidOperationException($"Cannot convert {value.Type} to number")
         };
     }
 
@@ -377,6 +379,8 @@ public class Evaluator
                     throw new InvalidOperationException("Cannot destructure non-object value with object pattern");
                 }
                 var obj = (Dictionary<string, Value>)value.Data!;
+                
+                // Process regular properties first
                 foreach (var property in objectPattern.Properties)
                 {
                     if (property.Key is IdentifierNode ident)
@@ -390,10 +394,46 @@ public class Evaluator
                         throw new InvalidOperationException("Computed property names not supported in destructuring yet");
                     }
                 }
+                
+                // Process rest element if present
+                if (objectPattern.Rest != null && objectPattern.Rest.Argument is IdentifierNode restIdent)
+                {
+                    var restObj = new Dictionary<string, Value>();
+                    var processedKeys = new HashSet<string>();
+                    
+                    // Collect all keys that are explicitly handled
+                    foreach (var prop in objectPattern.Properties)
+                    {
+                        if (prop.Key is IdentifierNode propIdent)
+                        {
+                            processedKeys.Add(propIdent.Name);
+                        }
+                    }
+                    
+                    // Collect all remaining properties into rest
+                    foreach (var kvp in obj)
+                    {
+                        if (!processedKeys.Contains(kvp.Key))
+                        {
+                            restObj[kvp.Key] = kvp.Value;
+                        }
+                    }
+                    
+                    env.Define(restIdent.Name, Value.Object(restObj));
+                }
                 break;
             case RestElementNode rest:
-                // This should be handled in the array pattern case
-                throw new InvalidOperationException("Rest element not in valid context");
+                // Handle rest element - create array of remaining values
+                if (rest.Argument is IdentifierNode identNode)
+                {
+                    var restArray = new List<Value>();
+                    env.Define(identNode.Name, Value.Array(restArray));
+                }
+                else
+                {
+                    throw new InvalidOperationException("Rest element must be an identifier");
+                }
+                break;
             default:
                 throw new InvalidOperationException($"Unsupported pattern type: {pattern.NodeType}");
         }
@@ -597,36 +637,67 @@ public class Evaluator
     {
         var argument = Eval(node.Argument, env);
 
-        return node.Operator switch
+        switch (node.Operator)
         {
-            "!" => Value.Boolean(!IsTruthy(argument)),
-            "-" => argument.Type switch
-            {
-                ValueType.Number => Value.Number(-(double)argument.Data!),
-                _ => throw new InvalidOperationException($"Cannot apply unary minus to {argument.Type}")
-            },
-            "+" => argument.Type switch
-            {
-                ValueType.Number => argument,
-                _ => throw new InvalidOperationException($"Cannot apply unary plus to {argument.Type}")
-            },
-            "typeof" => argument.Type switch
-            {
-                ValueType.Number => Value.String("number"),
-                ValueType.String => Value.String("string"),
-                ValueType.Boolean => Value.String("boolean"),
-                ValueType.Null => Value.String("object"),
-                ValueType.Undefined => Value.String("undefined"),
-                ValueType.Array => Value.String("object"),
-                ValueType.Object => Value.String("object"),
-                ValueType.Function => Value.String("function"),
-                ValueType.NativeFunction => Value.String("function"),
-                ValueType.Class => Value.String("function"),
-                ValueType.Instance => Value.String("object"),
-                _ => Value.String("unknown")
-            },
-            _ => throw new NotImplementedException($"Unary operator {node.Operator} not implemented")
-        };
+            case "!":
+                return Value.Boolean(!IsTruthy(argument));
+            case "-":
+                return argument.Type switch
+                {
+                    ValueType.Number => Value.Number(-(double)argument.Data!),
+                    _ => throw new InvalidOperationException($"Cannot apply unary minus to {argument.Type}")
+                };
+            case "+":
+                return argument.Type switch
+                {
+                    ValueType.Number => argument,
+                    _ => throw new InvalidOperationException($"Cannot apply unary plus to {argument.Type}")
+                };
+            case "typeof":
+                return argument.Type switch
+                {
+                    ValueType.Number => Value.String("number"),
+                    ValueType.String => Value.String("string"),
+                    ValueType.Boolean => Value.String("boolean"),
+                    ValueType.Null => Value.String("object"),
+                    ValueType.Undefined => Value.String("undefined"),
+                    ValueType.Array => Value.String("object"),
+                    ValueType.Object => Value.String("object"),
+                    ValueType.Function => Value.String("function"),
+                    ValueType.NativeFunction => Value.String("function"),
+                    ValueType.Class => Value.String("function"),
+                    ValueType.Instance => Value.String("object"),
+                    _ => Value.String("unknown")
+                };
+            case "++":
+                if (argument.Type == ValueType.Number)
+                {
+                    var currentValue = (double)argument.Data!;
+                    var newValue = currentValue + 1;
+                    // Update the variable if it's an identifier
+                    if (node.Argument is IdentifierNode identifier)
+                    {
+                        env.Assign(identifier.Name, Value.Number(newValue));
+                    }
+                    return Value.Number(newValue);
+                }
+                throw new InvalidOperationException($"Cannot apply ++ to {argument.Type}");
+            case "--":
+                if (argument.Type == ValueType.Number)
+                {
+                    var currentValue = (double)argument.Data!;
+                    var newValue = currentValue - 1;
+                    // Update the variable if it's an identifier
+                    if (node.Argument is IdentifierNode identifier)
+                    {
+                        env.Assign(identifier.Name, Value.Number(newValue));
+                    }
+                    return Value.Number(newValue);
+                }
+                throw new InvalidOperationException($"Cannot apply -- to {argument.Type}");
+            default:
+                throw new NotImplementedException($"Unary operator {node.Operator} not implemented");
+        }
     }
 
     private Value EvalCall(CallExpressionNode node, Environment env)
@@ -928,6 +999,7 @@ public class Evaluator
         }
 
         var obj = Eval(node.Object, env);
+        Console.WriteLine($"EvalMember: obj.Type = {obj.Type}, node.Computed = {node.Computed}, node.Property.NodeType = {node.Property.NodeType}");
 
         if (node.Optional && (obj.Type == ValueType.Null || obj.Type == ValueType.Undefined))
         {
@@ -939,13 +1011,16 @@ public class Evaluator
             if (node.Computed)
             {
                 var indexValue = Eval(node.Property, env);
+                Console.WriteLine($"Array access: indexValue = {indexValue.Type} ({indexValue.Data})");
                 if (indexValue.Type == ValueType.Number)
                 {
                     var num = (double)indexValue.Data!;
                     var index = (int)num;
                     var arr = (List<Value>)obj.Data!;
+                    Console.WriteLine($"Array access: index = {index}, arr.Count = {arr.Count}");
                     if (index >= 0 && index < arr.Count)
                     {
+                        Console.WriteLine($"Array access: returning arr[{index}] = {arr[index].Type} ({arr[index].Data})");
                         return arr[index];
                     }
                     else
@@ -970,6 +1045,7 @@ public class Evaluator
             }
         }
 
+        Console.WriteLine($"EvalMember: node.Computed = {node.Computed}, node.Property.NodeType = {node.Property.NodeType}");
         var propertyName = node.Computed
             ? ((string)Eval(node.Property, env).Data!)
             : ((IdentifierNode)node.Property).Name;
@@ -1199,13 +1275,29 @@ public class Evaluator
     private Value EvalObject(ObjectExpressionNode node, Environment env)
     {
         var properties = new Dictionary<string, Value>();
+        
+        // First process regular properties
         foreach (var prop in node.Properties)
         {
-            // For now, assume non-computed properties only
             var key = prop.Key;
             var value = Eval(prop.Value, env);
             properties[key] = value;
         }
+        
+        // Then process spread elements (they override previous properties)
+        foreach (var spread in node.Spreads)
+        {
+            var spreadValue = Eval(spread.Argument, env);
+            if (spreadValue.Type == ValueType.Object)
+            {
+                var spreadProps = (Dictionary<string, Value>)spreadValue.Data!;
+                foreach (var kvp in spreadProps)
+                {
+                    properties[kvp.Key] = kvp.Value;
+                }
+            }
+        }
+        
         return Value.Object(properties);
     }
 

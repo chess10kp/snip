@@ -1,9 +1,15 @@
-using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Snip.Lexer;
+
+public class LexingError(string message, int line, int column) : Exception(message)
+{
+    public int Line { get; } = line;
+    public int Column { get; } = column;
+
+    public override string Message => $"{base.Message} (line {Line}, column {Column})";
+}
 
 public enum TokenType
 {
@@ -463,7 +469,7 @@ public class Lexer
                 }
                 else
                 {
-                    AddToken(TokenType.Invalid, c.ToString());
+                    throw new LexingError($"Unexpected character '{c}'", _line, _column);
                 }
 
                 break;
@@ -508,8 +514,7 @@ public class Lexer
 
         if (IsAtEnd())
         {
-            AddToken(TokenType.Invalid, "Unterminated string");
-            return;
+            throw new LexingError("Unterminated string literal", _line, _column);
         }
 
         // Consume closing quote
@@ -534,8 +539,7 @@ public class Lexer
 
         if (IsAtEnd())
         {
-            AddToken(TokenType.Invalid, "Unterminated template string");
-            return;
+            throw new LexingError("Unterminated template literal", _line, _column);
         }
 
         Advance(); // consume the closing `

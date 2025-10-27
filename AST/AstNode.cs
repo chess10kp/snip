@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Snip.AST;
 
 public abstract class AstNode
@@ -436,9 +434,10 @@ public class ArrayExpressionNode (List<ExpressionNode> els) : ExpressionNode
     public override string NodeType => "ArrayExpression";
 }
 
-public class ObjectExpressionNode(List<PropertyNode> properties) : ExpressionNode
+public class ObjectExpressionNode(List<PropertyNode> properties, List<SpreadElementNode> spreads = null) : ExpressionNode
 {
     public List<PropertyNode> Properties { get; set; } = properties;
+    public List<SpreadElementNode> Spreads { get; set; } = spreads ?? new List<SpreadElementNode>();
     public override string NodeType => "ObjectExpression";
 }
 
@@ -496,6 +495,7 @@ public class ArrayPatternNode : PatternNode
 public class ObjectPatternNode : PatternNode
 {
     public List<PropertyPatternNode> Properties { get; set; } = new();
+    public RestElementNode? Rest { get; set; }
     public override string NodeType => "ObjectPattern";
 }
 
