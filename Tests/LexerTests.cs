@@ -129,8 +129,8 @@ public class LexerTests
         var tokens = lexer.Tokenize();
 
         // Assert
-        Assert.Equal(2, tokens.Count); // 1 string + EOF
-        Assert.Equal(TokenType.String, tokens[0].Type);
+        Assert.Equal(2, tokens.Count); // 1 template + EOF
+        Assert.Equal(TokenType.TemplateLiteral, tokens[0].Type);
         Assert.Equal("hello world", tokens[0].Value);
     }
 

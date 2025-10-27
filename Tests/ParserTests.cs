@@ -228,8 +228,8 @@ public class ParserTests
         var funcDecl = Assert.IsType<FunctionDeclarationNode>(program.Statements[0]);
         Assert.Equal("add", funcDecl.Name.Name);
         Assert.Equal(2, funcDecl.Parameters.Count);
-        Assert.Equal("a", funcDecl.Parameters[0].Name.Name);
-        Assert.Equal("b", funcDecl.Parameters[1].Name.Name);
+        Assert.Equal("a", Assert.IsType<ParameterNode>(funcDecl.Parameters[0]).Name.Name);
+        Assert.Equal("b", Assert.IsType<ParameterNode>(funcDecl.Parameters[1]).Name.Name);
 
         var body = funcDecl.Body;
         Assert.Single(body.Body);
@@ -255,8 +255,8 @@ public class ParserTests
         var exprStmt = Assert.IsType<ExpressionStatementNode>(program.Statements[0]);
         var arrowFunc = Assert.IsType<ArrowFunctionExpressionNode>(exprStmt.Expression);
         Assert.Equal(2, arrowFunc.Parameters.Count);
-        Assert.Equal("a", arrowFunc.Parameters[0].Name.Name);
-        Assert.Equal("b", arrowFunc.Parameters[1].Name.Name);
+        Assert.Equal("a", Assert.IsType<ParameterNode>(arrowFunc.Parameters[0]).Name.Name);
+        Assert.Equal("b", Assert.IsType<ParameterNode>(arrowFunc.Parameters[1]).Name.Name);
 
         var body = Assert.IsType<AddExpressionNode>(arrowFunc.Body);
         Assert.Equal("a", Assert.IsType<IdentifierNode>(body.Left).Name);

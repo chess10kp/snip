@@ -4,11 +4,11 @@ namespace Snip.Evaluator;
 
 public class FunctionValue
 {
-    public List<ParameterNode> Parameters { get; }
+    public List<AstNode> Parameters { get; }
     public BlockStatementNode Body { get; }
     public Environment Closure { get; }
 
-    public FunctionValue(List<ParameterNode> parameters, BlockStatementNode body, Environment closure)
+    public FunctionValue(List<AstNode> parameters, BlockStatementNode body, Environment closure)
     {
         Parameters = parameters;
         Body = body;
@@ -102,6 +102,20 @@ public class ExceptionValue
     }
 }
 
+public delegate Value NativeFunctionDelegate(List<Value> args);
+
+public class NativeFunctionValue
+{
+    public string Name { get; }
+    public NativeFunctionDelegate Function { get; }
+
+    public NativeFunctionValue(string name, NativeFunctionDelegate function)
+    {
+        Name = name;
+        Function = function;
+    }
+}
+
 public enum ValueType
 {
     Integer,
@@ -118,7 +132,8 @@ public enum ValueType
     Return,
     Break,
     Continue,
-    Exception
+    Exception,
+    NativeFunction
 }
 
 public class Value
@@ -148,6 +163,7 @@ public class Value
     public static Value Break(BreakValue breakValue) => new(ValueType.Break, breakValue);
     public static Value Continue(ContinueValue continueValue) => new(ValueType.Continue, continueValue);
     public static Value Exception(ExceptionValue exceptionValue) => new(ValueType.Exception, exceptionValue);
+    public static Value NativeFunction(NativeFunctionValue nativeFunction) => new(ValueType.NativeFunction, nativeFunction);
 
     public override string ToString()
     {
@@ -167,6 +183,7 @@ public class Value
             ValueType.Break => "[break]",
             ValueType.Continue => "[continue]",
             ValueType.Exception => $"[exception {(ExceptionValue)Data!}]",
+            ValueType.NativeFunction => $"[native function {(NativeFunctionValue)Data!}]",
             _ => "unknown"
         };
     }

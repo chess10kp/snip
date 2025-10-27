@@ -92,7 +92,7 @@ public class CaseNode : StatementNode
 public class FunctionDeclarationNode : DeclarationNode
 {
     public IdentifierNode Name { get; set; }
-    public List<ParameterNode> Parameters { get; set; } = new();
+    public List<AstNode> Parameters { get; set; } = new();
     public BlockStatementNode Body { get; set; }
     public string? ReturnType { get; set; }
     public bool IsAsync { get; set; }
@@ -350,11 +350,25 @@ public class GreaterThanOrEqualExpressionNode(ExpressionNode left, ExpressionNod
     public override string NodeType => "GreaterThanOrEqualExpression";
 }
 
+public class AndExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "AndExpression";
+}
+
+public class OrExpressionNode(ExpressionNode left, ExpressionNode right) : ExpressionNode
+{
+    public ExpressionNode Left { get; set; } = left;
+    public ExpressionNode Right { get; set; } = right;
+    public override string NodeType => "OrExpression";
+}
+
 
 public class FunctionExpressionNode : ExpressionNode
 {
     public IdentifierNode? Name { get; set; }
-    public List<ParameterNode> Parameters { get; set; } = new();
+    public List<AstNode> Parameters { get; set; } = new();
     public BlockStatementNode Body { get; set; }
     public string? ReturnType { get; set; }
     public bool IsAsync { get; set; }
@@ -363,7 +377,7 @@ public class FunctionExpressionNode : ExpressionNode
 
 public class ArrowFunctionExpressionNode : ExpressionNode
 {
-    public List<ParameterNode> Parameters { get; set; } = new();
+    public List<AstNode> Parameters { get; set; } = new();
     public AstNode Body { get; set; } // Can be BlockStatement or Expression
     public string? ReturnType { get; set; }
     public bool IsAsync { get; set; }
@@ -427,13 +441,13 @@ public class TemplateElementNode : AstNode
     public override string NodeType => "TemplateElement";
 }
 
-public class SpreadElementNode : AstNode
+public class SpreadElementNode : ExpressionNode
 {
     public ExpressionNode Argument { get; set; }
     public override string NodeType => "SpreadElement";
 }
 
-public class RestElementNode : AstNode
+public class RestElementNode : ExpressionNode
 {
     public ExpressionNode Argument { get; set; }
     public override string NodeType => "RestElement";

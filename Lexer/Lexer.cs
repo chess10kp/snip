@@ -55,6 +55,7 @@ public enum TokenType
     Semicolon, // ;
     Comma, // ,
     Dot, // .
+    Spread, // ...
     Colon, // :
     QuestionMark, // ?
     Arrow, // =>
@@ -123,6 +124,7 @@ public enum TokenType
     Newline,
     Whitespace,
     Comment,
+    TemplateLiteral, // `...`
     EndOfFile,
     Invalid
 }
@@ -131,8 +133,8 @@ public class Token
 {
     public TokenType Type { get; set; }
     public string Value { get; set; }
-    private int Line { get; set; }
-    private int Column { get; set; }
+    public int Line { get; set; }
+    public int Column { get; set; }
     private int Position { get; set; }
 
     public Token(TokenType type, string value, int line, int column, int position)
@@ -286,6 +288,10 @@ public class Lexer
                  if (IsDigit(Peek()))
                  {
                      ScanNumber();
+                 }
+                 else if (Match('.') && Match('.'))
+                 {
+                     AddToken(TokenType.Spread, "...");
                  }
                  else
                  {
@@ -524,8 +530,8 @@ public class Lexer
             return;
         }
 
-        Advance();
-        AddToken(TokenType.String, value.ToString());
+        Advance(); // consume the closing `
+        AddToken(TokenType.TemplateLiteral, value.ToString());
     }
 
     private void ScanNumber()

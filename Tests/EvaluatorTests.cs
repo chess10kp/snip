@@ -616,6 +616,36 @@ public class EvaluatorTests
     }
 
     [Fact]
+    public void EvalArraySpread_ShouldFlattenArrays()
+    {
+        var result = Evaluate("let arr1 = [1, 2]; let arr2 = [3, 4]; [...arr1, ...arr2, 5];");
+        Assert.Equal(Snip.Evaluator.ValueType.Array, result.Type);
+        var arr = Assert.IsType<List<Snip.Evaluator.Value>>(result.Data);
+        Assert.Equal(5, arr.Count);
+        Assert.Equal(1.0, arr[0].Data);
+        Assert.Equal(2.0, arr[1].Data);
+        Assert.Equal(3.0, arr[2].Data);
+        Assert.Equal(4.0, arr[3].Data);
+        Assert.Equal(5.0, arr[4].Data);
+    }
+
+    [Fact]
+    public void EvalFunctionRestParameters_ShouldCollectRemainingArgs()
+    {
+        var result = Evaluate("function sum(a, b, ...rest) { let total = a + b; for (let i = 0; i < rest.length; i++) { total += rest[i]; } return total; } sum(1, 2, 3, 4);");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(10.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalFunctionCallSpread_ShouldExpandArguments()
+    {
+        var result = Evaluate("function add(a, b, c) { return a + b + c; } let args = [1, 2, 3]; add(...args);");
+        Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
+        Assert.Equal(6.0, result.Data);
+    }
+
+    [Fact]
     public void EvalArrowFunctionExpression_ShouldReturnFunction()
     {
         var result = Evaluate("let add = (a, b) => a + b; add;");
@@ -660,5 +690,37 @@ public class EvaluatorTests
         var result = Evaluate("let multiplier = 2; let multiply = x => x * multiplier; multiply(5);");
         Assert.Equal(Snip.Evaluator.ValueType.Float, result.Type);
         Assert.Equal(10.0, result.Data);
+    }
+
+    [Fact]
+    public void EvalTemplateLiteralNoInterpolation_ShouldReturnString()
+    {
+        var result = Evaluate("`Hello World`;");
+        Assert.Equal(Snip.Evaluator.ValueType.String, result.Type);
+        Assert.Equal("Hello World", result.Data);
+    }
+
+    [Fact]
+    public void EvalTemplateLiteralWithVariable_ShouldInterpolate()
+    {
+        var result = Evaluate("let name = \"John\"; `Hello ${name}!`;");
+        Assert.Equal(Snip.Evaluator.ValueType.String, result.Type);
+        Assert.Equal("Hello John!", result.Data);
+    }
+
+    [Fact]
+    public void EvalTemplateLiteralWithNumber_ShouldInterpolate()
+    {
+        var result = Evaluate("let age = 25; `I am ${age} years old.`;");
+        Assert.Equal(Snip.Evaluator.ValueType.String, result.Type);
+        Assert.Equal("I am 25 years old.", result.Data);
+    }
+
+    [Fact]
+    public void EvalTemplateLiteralMultipleInterpolations_ShouldWork()
+    {
+        var result = Evaluate("let a = 1; let b = 2; `Values: ${a} and ${b}`;");
+        Assert.Equal(Snip.Evaluator.ValueType.String, result.Type);
+        Assert.Equal("Values: 1 and 2", result.Data);
     }
 }

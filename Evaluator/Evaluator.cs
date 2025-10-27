@@ -1,5 +1,8 @@
 using Snip.AST;
 
+using System.Linq;
+using System.Text;
+
 namespace Snip.Evaluator;
 
 public class Evaluator
@@ -12,6 +15,7 @@ public class Evaluator
             IntegerLiteralNode intLit => Value.Integer(intLit.Value),
             FloatLiteralNode floatLit => Value.Float(floatLit.Value),
             StringLiteralNode strLit => Value.String(strLit.Value),
+            TemplateLiteralNode templateLit => EvalTemplateLiteral(templateLit, env),
             BooleanLiteralNode boolLit => Value.Boolean(boolLit.Value),
             NullLiteralNode => Value.Null(),
             UndefinedLiteralNode => Value.Undefined(),
@@ -26,9 +30,11 @@ public class Evaluator
             NotEqualExpressionNode neExpr => EvalBinary(neExpr.Left, neExpr.Right, "!=", env),
             LessThanExpressionNode ltExpr => EvalBinary(ltExpr.Left, ltExpr.Right, "<", env),
             LessThanOrEqualExpressionNode leExpr => EvalBinary(leExpr.Left, leExpr.Right, "<=", env),
-            GreaterThanExpressionNode gtExpr => EvalBinary(gtExpr.Left, gtExpr.Right, ">", env),
-            GreaterThanOrEqualExpressionNode geExpr => EvalBinary(geExpr.Left, geExpr.Right, ">=", env),
-             AssignmentExpressionNode assignExpr => EvalAssignment(assignExpr, env),
+             GreaterThanExpressionNode gtExpr => EvalBinary(gtExpr.Left, gtExpr.Right, ">", env),
+             GreaterThanOrEqualExpressionNode geExpr => EvalBinary(geExpr.Left, geExpr.Right, ">=", env),
+             AndExpressionNode andExpr => EvalAnd(andExpr, env),
+             OrExpressionNode orExpr => EvalOr(orExpr, env),
+              AssignmentExpressionNode assignExpr => EvalAssignment(assignExpr, env),
              LetStatementNode letStmt => EvalLet(letStmt, env),
              VarStatementNode varStmt => EvalVar(varStmt, env),
              ConstStatementNode constStmt => EvalConst(constStmt, env),
@@ -56,8 +62,9 @@ public class Evaluator
                TryStatementNode tryStmt => EvalTry(tryStmt, env),
               MemberExpressionNode memberExpr => EvalMember(memberExpr, env),
              ObjectExpressionNode objExpr => EvalObject(objExpr, env),
-             ArrayExpressionNode arrExpr => EvalArray(arrExpr, env),
-             _ => throw new NotImplementedException($"Evaluation not implemented for {node.NodeType}")
+              ArrayExpressionNode arrExpr => EvalArray(arrExpr, env),
+              SpreadElementNode spreadElem => EvalSpread(spreadElem, env),
+              _ => throw new NotImplementedException($"Evaluation not implemented for {node.NodeType}")
         };
     }
 
@@ -79,8 +86,6 @@ public class Evaluator
             "<=" => Value.Boolean(CompareValues(left, right) <= 0),
             ">" => Value.Boolean(CompareValues(left, right) > 0),
             ">=" => Value.Boolean(CompareValues(left, right) >= 0),
-            "&&" => Value.Boolean(IsTruthy(left) && IsTruthy(right)),
-            "||" => Value.Boolean(IsTruthy(left) || IsTruthy(right)),
             _ => throw new NotImplementedException($"Binary operator {op} not implemented")
         };
     }
@@ -88,6 +93,26 @@ public class Evaluator
     private Value EvalBinary(BinaryExpressionNode node, Environment env)
     {
         return EvalBinary(node.Left, node.Right, node.Operator, env);
+    }
+
+    private Value EvalAnd(AndExpressionNode node, Environment env)
+    {
+        var left = Eval(node.Left, env);
+        if (!IsTruthy(left))
+        {
+            return left;
+        }
+        return Eval(node.Right, env);
+    }
+
+    private Value EvalOr(OrExpressionNode node, Environment env)
+    {
+        var left = Eval(node.Left, env);
+        if (IsTruthy(left))
+        {
+            return left;
+        }
+        return Eval(node.Right, env);
     }
 
     private Value ApplyBinaryOp(Value left, Value right, string op)
@@ -105,8 +130,6 @@ public class Evaluator
             "<=" => Value.Boolean(CompareValues(left, right) <= 0),
             ">" => Value.Boolean(CompareValues(left, right) > 0),
             ">=" => Value.Boolean(CompareValues(left, right) >= 0),
-            "&&" => Value.Boolean(IsTruthy(left) && IsTruthy(right)),
-            "||" => Value.Boolean(IsTruthy(left) || IsTruthy(right)),
             _ => throw new NotImplementedException($"Binary operator {op} not implemented")
         };
     }
@@ -521,6 +544,22 @@ public class Evaluator
                 ValueType.Float => argument,
                 _ => throw new InvalidOperationException($"Cannot apply unary plus to {argument.Type}")
             },
+            "typeof" => argument.Type switch
+            {
+                ValueType.Integer => Value.String("number"),
+                ValueType.Float => Value.String("number"),
+                ValueType.String => Value.String("string"),
+                ValueType.Boolean => Value.String("boolean"),
+                ValueType.Null => Value.String("object"),
+                ValueType.Undefined => Value.String("undefined"),
+                ValueType.Array => Value.String("object"),
+                ValueType.Object => Value.String("object"),
+                ValueType.Function => Value.String("function"),
+                ValueType.NativeFunction => Value.String("function"),
+                ValueType.Class => Value.String("function"),
+                ValueType.Instance => Value.String("object"),
+                _ => Value.String("unknown")
+            },
             _ => throw new NotImplementedException($"Unary operator {node.Operator} not implemented")
         };
     }
@@ -540,13 +579,39 @@ public class Evaluator
         }
 
         var callee = Eval(node.Callee, env);
+        var args = new List<Value>();
+        foreach (var arg in node.Arguments)
+        {
+            var evaluated = Eval(arg, env);
+            if (arg is SpreadElementNode)
+            {
+                if (evaluated.Type == ValueType.Array)
+                {
+                    args.AddRange((List<Value>)evaluated.Data!);
+                }
+                else
+                {
+                    args.Add(evaluated);
+                }
+            }
+            else
+            {
+                args.Add(evaluated);
+            }
+        }
+
+        if (callee.Type == ValueType.NativeFunction)
+        {
+            var nativeFunction = (NativeFunctionValue)callee.Data!;
+            return nativeFunction.Function(args);
+        }
+
         if (callee.Type != ValueType.Function)
         {
             throw new InvalidOperationException("Can only call function values");
         }
 
         var function = (FunctionValue)callee.Data!;
-        var args = node.Arguments.Select(arg => Eval(arg, env)).ToList();
 
         // Create function environment
         var functionEnv = new Environment(function.Closure);
@@ -559,11 +624,25 @@ public class Evaluator
         }
 
         // Bind parameters
+        int argIndex = 0;
         for (int i = 0; i < function.Parameters.Count; i++)
         {
-            var paramName = function.Parameters[i].Name.Name;
-            var argValue = i < args.Count ? args[i] : Value.Undefined();
-            functionEnv.Define(paramName, argValue);
+            var param = function.Parameters[i];
+            if (param is ParameterNode paramNode)
+            {
+                var paramName = paramNode.Name.Name;
+                var argValue = argIndex < args.Count ? args[argIndex] : Value.Undefined();
+                functionEnv.Define(paramName, argValue);
+                argIndex++;
+            }
+            else if (param is RestElementNode restNode)
+            {
+                var restArgs = args.Skip(argIndex).ToList();
+                var restArray = Value.Array(restArgs);
+                functionEnv.Define(((IdentifierNode)restNode.Argument).Name, restArray);
+                // Rest must be last, so break
+                break;
+            }
         }
 
         // Execute function body
@@ -621,11 +700,24 @@ public class Evaluator
             constructorEnv.Define("this", Value.Instance(instance));
 
             // Bind parameters
+            int argIndex = 0;
             for (int i = 0; i < constructor.Parameters.Count; i++)
             {
-                var paramName = constructor.Parameters[i].Name.Name;
-                var argValue = i < args.Count ? args[i] : Value.Undefined();
-                constructorEnv.Define(paramName, argValue);
+                var param = constructor.Parameters[i];
+                if (param is ParameterNode paramNode)
+                {
+                    var paramName = paramNode.Name.Name;
+                    var argValue = argIndex < args.Count ? args[argIndex] : Value.Undefined();
+                    constructorEnv.Define(paramName, argValue);
+                    argIndex++;
+                }
+                else if (param is RestElementNode restNode)
+                {
+                    var restArgs = args.Skip(argIndex).ToList();
+                    var restArray = Value.Array(restArgs);
+                    constructorEnv.Define(((IdentifierNode)restNode.Argument).Name, restArray);
+                    break;
+                }
             }
 
             // Execute constructor body
@@ -665,6 +757,28 @@ public class Evaluator
 
         var function = new FunctionValue(node.Parameters, body, env);
         return Value.Function(function);
+    }
+
+    private Value EvalTemplateLiteral(TemplateLiteralNode node, Environment env)
+    {
+        var result = new StringBuilder();
+
+        for (int i = 0; i < node.Quasis.Count; i++)
+        {
+            result.Append(node.Quasis[i].Value);
+
+            if (i < node.Expressions.Count)
+            {
+                var exprValue = Eval(node.Expressions[i], env);
+                // Get the raw string representation without quotes for strings
+                var strValue = exprValue.Type == ValueType.String
+                    ? (string)exprValue.Data!
+                    : exprValue.ToString();
+                result.Append(strValue);
+            }
+        }
+
+        return Value.String(result.ToString());
     }
 
     private Value EvalClassDeclaration(ClassDeclarationNode node, Environment env)
@@ -750,6 +864,42 @@ public class Evaluator
 
         var obj = Eval(node.Object, env);
 
+        if (obj.Type == ValueType.Array)
+        {
+            if (node.Computed)
+            {
+                var indexValue = Eval(node.Property, env);
+                if (indexValue.Type == ValueType.Integer || indexValue.Type == ValueType.Float)
+                {
+                    var num = indexValue.Type == ValueType.Integer ? (double)(int)indexValue.Data! : (double)indexValue.Data!;
+                    var index = (int)num;
+                    var arr = (List<Value>)obj.Data!;
+                    if (index >= 0 && index < arr.Count)
+                    {
+                        return arr[index];
+                    }
+                    else
+                    {
+                        return Value.Undefined();
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Array index must be a number");
+                }
+            }
+            else
+            {
+                // Property access on array, e.g., arr.length
+                if (((IdentifierNode)node.Property).Name == "length")
+                {
+                    var arr = (List<Value>)obj.Data!;
+                    return Value.Float(arr.Count);
+                }
+                return Value.Undefined();
+            }
+        }
+
         var propertyName = node.Computed
             ? ((string)Eval(node.Property, env).Data!)
             : ((IdentifierNode)node.Property).Name;
@@ -832,11 +982,24 @@ public class Evaluator
         constructorEnv.Define("this", thisValue);
 
         // Bind parameters
+        int argIndex = 0;
         for (int i = 0; i < constructor.Parameters.Count; i++)
         {
-            var paramName = constructor.Parameters[i].Name.Name;
-            var argValue = i < args.Count ? args[i] : Value.Undefined();
-            constructorEnv.Define(paramName, argValue);
+            var param = constructor.Parameters[i];
+            if (param is ParameterNode paramNode)
+            {
+                var paramName = paramNode.Name.Name;
+                var argValue = argIndex < args.Count ? args[argIndex] : Value.Undefined();
+                constructorEnv.Define(paramName, argValue);
+                argIndex++;
+            }
+            else if (param is RestElementNode restNode)
+            {
+                var restArgs = args.Skip(argIndex).ToList();
+                var restArray = Value.Array(restArgs);
+                constructorEnv.Define(((IdentifierNode)restNode.Argument).Name, restArray);
+                break;
+            }
         }
 
         // Execute constructor body
@@ -888,11 +1051,24 @@ public class Evaluator
                 functionEnv.Define("this", thisValue);
 
                 // Bind parameters
+                int argIndex = 0;
                 for (int i = 0; i < function.Parameters.Count; i++)
                 {
-                    var paramName = function.Parameters[i].Name.Name;
-                    var argValue = i < args.Count ? args[i] : Value.Undefined();
-                    functionEnv.Define(paramName, argValue);
+                    var param = function.Parameters[i];
+                    if (param is ParameterNode paramNode)
+                    {
+                        var paramName = paramNode.Name.Name;
+                        var argValue = argIndex < args.Count ? args[argIndex] : Value.Undefined();
+                        functionEnv.Define(paramName, argValue);
+                        argIndex++;
+                    }
+                    else if (param is RestElementNode restNode)
+                    {
+                        var restArgs = args.Skip(argIndex).ToList();
+                        var restArray = Value.Array(restArgs);
+                        functionEnv.Define(((IdentifierNode)restNode.Argument).Name, restArray);
+                        break;
+                    }
                 }
 
                 // Execute function body
@@ -966,14 +1142,42 @@ public class Evaluator
     private Value EvalArray(ArrayExpressionNode node, Environment env)
     {
         var elements = new List<Value>();
-        if (node.Elements != null)
+        foreach (var elem in node.Elements)
         {
-            foreach (var elem in node.Elements)
+            if (elem is SpreadElementNode spread)
+            {
+                var spreadValue = Eval(spread.Argument, env);
+                if (spreadValue.Type == ValueType.Array)
+                {
+                    var arr = (List<Value>)spreadValue.Data!;
+                    elements.AddRange(arr);
+                }
+                else
+                {
+                    // For non-arrays, perhaps add as single element or error
+                    elements.Add(spreadValue);
+                }
+            }
+            else
             {
                 elements.Add(Eval(elem, env));
             }
         }
         return Value.Array(elements);
+    }
+
+    private Value EvalSpread(SpreadElementNode node, Environment env)
+    {
+        var value = Eval(node.Argument, env);
+        if (value.Type == ValueType.Array)
+        {
+            return value; // Return the array to be spread
+        }
+        else
+        {
+            // For non-arrays, wrap in array or something
+            return Value.Array(new List<Value> { value });
+        }
     }
 
     private Value EvalThrow(ThrowStatementNode node, Environment env)

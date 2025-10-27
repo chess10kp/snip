@@ -52,4 +52,78 @@ public class Environment
     {
         return new Environment(this);
     }
+
+    public void InitializeBuiltins()
+    {
+        // print function
+        Define("print", Value.NativeFunction(new NativeFunctionValue("print", args =>
+        {
+            foreach (var arg in args)
+            {
+                Console.Write(arg.ToString());
+            }
+            Console.WriteLine();
+            return Value.Undefined();
+        })));
+
+        // typeof function
+        Define("typeof", Value.NativeFunction(new NativeFunctionValue("typeof", args =>
+        {
+            if (args.Count == 0) return Value.String("undefined");
+            var arg = args[0];
+            var typeStr = arg.Type switch
+            {
+                ValueType.Integer => "number",
+                ValueType.Float => "number",
+                ValueType.String => "string",
+                ValueType.Boolean => "boolean",
+                ValueType.Null => "object",
+                ValueType.Undefined => "undefined",
+                ValueType.Array => "object",
+                ValueType.Object => "object",
+                ValueType.Function => "function",
+                ValueType.NativeFunction => "function",
+                ValueType.Class => "function",
+                ValueType.Instance => "object",
+                _ => "unknown"
+            };
+            return Value.String(typeStr);
+        })));
+
+        // parseInt function
+        Define("parseInt", Value.NativeFunction(new NativeFunctionValue("parseInt", args =>
+        {
+            if (args.Count == 0) return Value.Integer(0);
+            var str = args[0].ToString().Trim('"');
+            if (long.TryParse(str, out var result))
+            {
+                return Value.Integer(result);
+            }
+            return Value.Integer(0);
+        })));
+
+        // Math object with some functions
+        var mathObj = new Dictionary<string, Value>();
+        mathObj["abs"] = Value.NativeFunction(new NativeFunctionValue("Math.abs", args =>
+        {
+            if (args.Count == 0) return Value.Integer(0);
+            var arg = args[0];
+            if (arg.Type == ValueType.Integer)
+            {
+                return Value.Integer(Math.Abs((long)arg.Data!));
+            }
+            else if (arg.Type == ValueType.Float)
+            {
+                return Value.Float(Math.Abs((double)arg.Data!));
+            }
+            return Value.Integer(0);
+        }));
+
+        mathObj["random"] = Value.NativeFunction(new NativeFunctionValue("Math.random", args =>
+        {
+            return Value.Float(new Random().NextDouble());
+        }));
+
+        Define("Math", Value.Object(mathObj));
+    }
 }

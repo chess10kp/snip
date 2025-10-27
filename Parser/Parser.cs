@@ -31,23 +31,35 @@ public class Parser
          { TokenType.Dot, 4 }, // Member access
          { TokenType.Equal, 5 },
          { TokenType.NotEqual, 5 },
-         { TokenType.LessThan, 6 },
-         { TokenType.LessThanOrEqual, 6 },
-         { TokenType.GreaterThan, 6 },
-         { TokenType.GreaterThanOrEqual, 6 },
-      };
+          { TokenType.LessThan, 6 },
+          { TokenType.LessThanOrEqual, 6 },
+          { TokenType.GreaterThan, 6 },
+          { TokenType.GreaterThanOrEqual, 6 },
+          { TokenType.Or, 7 },
+          { TokenType.And, 8 },
+       };
 
    public Parser(Lexer.Lexer lexer)
    {
       _token = lexer.Tokenize();
    }
 
-   private Token? _peek(int lookahead = 0)
-   {
-      if (_ptr + lookahead < _token.Count) 
-         return _token[_ptr + lookahead];
-      return null;
-   }
+    private Token? _peek(int lookahead = 0)
+    {
+       if (_ptr + lookahead < _token.Count)
+          return _token[_ptr + lookahead];
+       return null;
+    }
+
+    private void ThrowParsingError(string message)
+    {
+        var token = _peek();
+        if (token != null)
+        {
+            throw new ParsingError(message, token.Line, token.Column);
+        }
+        throw new ParsingError(message);
+    }
 
    public Token? _next()
    {
@@ -115,6 +127,7 @@ public class Parser
         {
            TokenType.Number => ParseNumberExpression(),
            TokenType.String => ParseStringExpression(),
+           TokenType.TemplateLiteral => ParseTemplateExpression(),
            TokenType.Boolean => ParseBooleanExpression(),
            TokenType.Null => ParseNullExpression(),
            TokenType.Undefined => ParseUndefinedExpression(),
@@ -129,9 +142,10 @@ public class Parser
             TokenType.Not => ParseUnaryExpression(),
             TokenType.Increment => ParseUnaryExpression(),
             TokenType.Decrement => ParseUnaryExpression(),
-           TokenType.New => ParseNewExpression(),
-           TokenType.RightParen => throw new ParsingError($"Expected expression inside parens"),
-           _ => throw new ParsingError($"ParsePrefixExpression: Unexpected token: {token.Type}")
+            TokenType.New => ParseNewExpression(),
+            TokenType.Typeof => ParseUnaryExpression(),
+            TokenType.RightParen => throw new ParsingError($"Expected expression inside parens"),
+            _ => throw new ParsingError($"ParsePrefixExpression: Unexpected token: {token.Type}")
         };
     }
 
@@ -158,10 +172,13 @@ public class Parser
              TokenType.NotEqual => ParseBinaryExpression(left, operatorType),
              TokenType.GreaterThan => ParseBinaryExpression(left, operatorType),
              TokenType.LessThan => ParseBinaryExpression(left, operatorType),
-             TokenType.LessThanOrEqual => ParseBinaryExpression(left, operatorType),
-             TokenType.GreaterThanOrEqual => ParseBinaryExpression(left, operatorType),
-             TokenType.LeftParen => ParseCallExpression(left),
+              TokenType.LessThanOrEqual => ParseBinaryExpression(left, operatorType),
+              TokenType.GreaterThanOrEqual => ParseBinaryExpression(left, operatorType),
+              TokenType.Or => ParseBinaryExpression(left, operatorType),
+              TokenType.And => ParseBinaryExpression(left, operatorType),
+              TokenType.LeftParen => ParseCallExpression(left),
              TokenType.Dot => ParseMemberExpression(left),
+             TokenType.LeftBracket => ParseArrayAccess(left),
             _ => throw new ParsingError($"Unexpected infix operator: {operatorType}")
          };
      }
@@ -211,9 +228,11 @@ TokenType.Equal => new EqualExpressionNode(left, right),
              TokenType.NotEqual => new NotEqualExpressionNode(left, right),
              TokenType.GreaterThan => new GreaterThanExpressionNode(left, right),
              TokenType.LessThan => new LessThanExpressionNode(left, right),
-             TokenType.LessThanOrEqual => new LessThanOrEqualExpressionNode(left, right),
-             TokenType.GreaterThanOrEqual => new GreaterThanOrEqualExpressionNode(left, right),
-            _ => throw new ParsingError($"Unexpected binary operator: {operatorType}")
+              TokenType.LessThanOrEqual => new LessThanOrEqualExpressionNode(left, right),
+              TokenType.GreaterThanOrEqual => new GreaterThanOrEqualExpressionNode(left, right),
+              TokenType.And => new AndExpressionNode(left, right),
+              TokenType.Or => new OrExpressionNode(left, right),
+             _ => throw new ParsingError($"Unexpected binary operator: {operatorType}")
          };
      }
 
@@ -261,23 +280,32 @@ TokenType.Equal => new EqualExpressionNode(left, right),
     {
        _next(); // Consume '('
        var arguments = new List<ExpressionNode>();
-       
+
        while (_peek() is not { Type: TokenType.RightParen })
        {
-          var argument = ParseExpression();
-          arguments.Add(argument);
-          
+          if (_peek()?.Type == TokenType.Spread)
+          {
+             _next(); // consume ...
+             var argument = ParseExpression();
+             arguments.Add(new SpreadElementNode { Argument = argument });
+          }
+          else
+          {
+             var argument = ParseExpression();
+             arguments.Add(argument);
+          }
+
           if (_peek()?.Type == TokenType.Comma)
           {
              _next(); // Consume comma
           }
        }
-       
+
        if (_peek()?.Type != TokenType.RightParen)
           throw new ParsingError("Expected ')' in function call");
-          
+
        _next(); // Consume ')'
-       
+
        return new CallExpressionNode
        {
           Callee = callee,
@@ -288,26 +316,34 @@ TokenType.Equal => new EqualExpressionNode(left, right),
     private ExpressionNode ParseMemberExpression(ExpressionNode obj)
     {
        _next(); // Consume '.'
-       
-       var propertyToken = _peek();
-       if (propertyToken is not { Type: TokenType.Identifier })
-          throw new ParsingError("Expected identifier after '.'");
-          
-       _next(); // Consume identifier
-       
-       var property = new IdentifierNode(propertyToken.Value);
-       
-       return new MemberExpressionNode(obj, property)
-       {
-          Computed = false
-       };
+
+       var tok = _peek();
+       if (tok is not { Type: TokenType.Identifier })
+          throw new ParsingError("Expected identifier after .");
+
+       _next();
+       return new MemberExpressionNode(obj, new IdentifierNode(tok.Value));
+    }
+
+    private ExpressionNode ParseArrayAccess(ExpressionNode array)
+    {
+       _next(); // Consume '['
+
+       var index = ParseExpression();
+
+       if (_peek()?.Type != TokenType.RightBracket)
+          throw new ParsingError("Expected ] after array index");
+
+       _next(); // Consume ']'
+
+       return new MemberExpressionNode(array, index) { Computed = true };
     }
 
     private ExpressionNode ParseUnaryExpression()
     {
        var token = _peek();
-        if (token?.Type != TokenType.Plus && token?.Type != TokenType.Minus && token?.Type != TokenType.Not && token?.Type != TokenType.Increment && token?.Type != TokenType.Decrement)
-           throw new ParsingError("Expected unary operator");
+        if (token?.Type != TokenType.Plus && token?.Type != TokenType.Minus && token?.Type != TokenType.Not && token?.Type != TokenType.Increment && token?.Type != TokenType.Decrement && token?.Type != TokenType.Typeof)
+            throw new ParsingError("Expected unary operator");
 
        _next(); // Consume the operator
        var argument = ParseExpression(GetPrecedence(TokenType.Plus)); // Unary operators have high precedence
@@ -325,25 +361,25 @@ TokenType.Equal => new EqualExpressionNode(left, right),
        // let name = expr
        var node = new LetStatementNode();
        var tok = _peek();
-       if (tok == null || tok.Type != TokenType.Let)
-          throw new ParsingError("Expected let");
+        if (tok == null || tok.Type != TokenType.Let)
+           ThrowParsingError("Expected let");
 
-       _next();
-       tok = _peek();
-       if (tok is not { Type: TokenType.Identifier })
-          throw new ParsingError("Expected identifier");
-       node.Name = new IdentifierNode(tok.Value);
+        _next();
+        tok = _peek();
+        if (tok is not { Type: TokenType.Identifier })
+           ThrowParsingError("Expected identifier");
 
-       _next();
-       tok = _peek();
-       if (tok is not { Type: TokenType.Assign })
-          throw new ParsingError("Expected =");
+        node.Name = new IdentifierNode(tok.Value);
+        _next();
+        tok = _peek();
+        if (tok is not { Type: TokenType.Assign })
+           ThrowParsingError("Expected =");
 
-       _next();
-       node.Value = ParseExpression();
+        _next();
+        node.Value = ParseExpression();
 
-       tok = _peek();
-       if (tok is not { Type:  TokenType.Semicolon}) throw new ParsingError("Expected semicolon in assignment");
+        tok = _peek();
+        if (tok is not { Type:  TokenType.Semicolon}) ThrowParsingError("Expected semicolon in assignment");
        _next();
        return node;
     }
@@ -422,7 +458,7 @@ TokenType.Equal => new EqualExpressionNode(left, right),
           throw new ParsingError("Expected ( after function name");
        _next(); // consume (
 
-       node.Parameters = new List<ParameterNode>();
+        node.Parameters = new List<AstNode>();
        while (_peek()?.Type != TokenType.RightParen)
        {
           var param = ParseParameter();
@@ -537,7 +573,7 @@ TokenType.Equal => new EqualExpressionNode(left, right),
         {
            // It's a method - parse as function
            _next(); // consume (
-           var parameters = new List<ParameterNode>();
+           var parameters = new List<AstNode>();
            while (_peek()?.Type != TokenType.RightParen)
            {
               var param = ParseParameter();
@@ -576,14 +612,27 @@ TokenType.Equal => new EqualExpressionNode(left, right),
         return member;
      }
 
-     private ParameterNode ParseParameter()
+     private AstNode ParseParameter()
     {
-       var tok = _peek();
-       if (tok is not { Type: TokenType.Identifier })
-          throw new ParsingError("Expected parameter name");
-       var name = new IdentifierNode(tok.Value);
-       _next();
-       return new ParameterNode { Name = name };
+        if (_peek()?.Type == TokenType.Spread)
+        {
+           _next(); // consume ...
+           var tok = _peek();
+           if (tok is not { Type: TokenType.Identifier })
+              throw new ParsingError("Expected parameter name after ...");
+           var name = new IdentifierNode(tok.Value);
+           _next();
+           return new RestElementNode { Argument = name };
+        }
+        else
+        {
+           var tok = _peek();
+           if (tok is not { Type: TokenType.Identifier })
+              throw new ParsingError("Expected parameter name");
+           var name = new IdentifierNode(tok.Value);
+           _next();
+           return new ParameterNode { Name = name };
+        }
     }
 
    private StatementNode ParseReturnStatement()
@@ -614,7 +663,7 @@ node.Value = ParseExpression();
        _next(); // (
        var savedPtr = _ptr;
        // Try to parse as parameters
-       var parameters = new List<ParameterNode>();
+       var parameters = new List<AstNode>();
        bool parsedAsParams = true;
        try
        {
@@ -696,26 +745,35 @@ node.Value = ParseExpression();
          throw new ParsingError("Should not reach here");
      }
 
-   private ExpressionNode ParseArrayExpression()
-   {
-      if (_peek()?.Type != TokenType.LeftBracket) throw new ParsingError("Expected ','");
-      _next();
-      var elements = new List<ExpressionNode>();
-      
-      while (_peek() is not { Type: TokenType.RightBracket })
-      {
-         var element = ParseExpression();
-         elements.Add(element);
-         
-         if (_peek()?.Type == TokenType.Comma)
-         {
-            _next();
-         }
-      }
-      
-      _next(); 
-      return new ArrayExpressionNode(elements);
-   }
+    private ExpressionNode ParseArrayExpression()
+    {
+       if (_peek()?.Type != TokenType.LeftBracket) throw new ParsingError("Expected ','");
+       _next();
+       var elements = new List<ExpressionNode>();
+
+       while (_peek() is not { Type: TokenType.RightBracket })
+       {
+          if (_peek()?.Type == TokenType.Spread)
+          {
+             _next(); // consume ...
+             var argument = ParseExpression();
+             elements.Add(new SpreadElementNode { Argument = argument });
+          }
+          else
+          {
+             var element = ParseExpression();
+             elements.Add(element);
+          }
+
+          if (_peek()?.Type == TokenType.Comma)
+          {
+             _next();
+          }
+       }
+
+       _next();
+       return new ArrayExpressionNode(elements);
+    }
 
    private ExpressionNode ParseObjectExpression()
    {
@@ -777,14 +835,86 @@ node.Value = ParseExpression();
           return new IntegerLiteralNode(tok.Value);
     }
 
-   private StringLiteralNode ParseStringExpression()
-   {
-      var tok = _peek();
-      if (tok is not { Type: TokenType.String })
-         throw new ParsingError("Expected string");
-      _next();
-      return new StringLiteralNode(tok.Value);
-   }
+    private StringLiteralNode ParseStringExpression()
+    {
+       var tok = _peek();
+       if (tok is not { Type: TokenType.String })
+          throw new ParsingError("Expected string");
+       _next();
+       return new StringLiteralNode(tok.Value);
+    }
+
+    private ExpressionNode ParseTemplateExpression()
+    {
+       var tok = _peek();
+       if (tok is not { Type: TokenType.TemplateLiteral })
+          throw new ParsingError("Expected template");
+       _next();
+
+       var templateContent = tok.Value;
+       var templateLiteral = new TemplateLiteralNode();
+
+       // Parse the template content
+       // For now, if there are no ${}, treat as simple string
+       if (!templateContent.Contains("${"))
+       {
+           templateLiteral.Quasis.Add(new TemplateElementNode { Value = templateContent, Tail = true });
+           return templateLiteral;
+       }
+
+       // Parse template with interpolation
+       var parts = templateContent.Split(new[] { "${" }, StringSplitOptions.None);
+       for (int i = 0; i < parts.Length; i++)
+       {
+           var part = parts[i];
+           if (i == 0)
+           {
+               // First part is before any ${
+               templateLiteral.Quasis.Add(new TemplateElementNode { Value = part, Tail = false });
+           }
+           else
+           {
+               // Find the closing }
+               var braceIndex = part.IndexOf('}');
+               if (braceIndex == -1)
+               {
+                   throw new ParsingError("Unclosed ${ in template literal");
+               }
+
+               var expressionStr = part.Substring(0, braceIndex).Trim();
+               var remaining = part.Substring(braceIndex + 1);
+
+               // For simple cases, parse as identifier or number
+               ExpressionNode expr;
+               if (int.TryParse(expressionStr, out var num))
+               {
+                   expr = new IntegerLiteralNode(expressionStr);
+               }
+               else if (double.TryParse(expressionStr, out var dbl))
+               {
+                   expr = new FloatLiteralNode(dbl);
+               }
+               else
+               {
+                   expr = new IdentifierNode(expressionStr);
+               }
+
+               templateLiteral.Expressions.Add(expr);
+
+               // Add the remaining part as a quasi
+               if (i == parts.Length - 1)
+               {
+                   templateLiteral.Quasis.Add(new TemplateElementNode { Value = remaining, Tail = true });
+               }
+               else
+               {
+                   templateLiteral.Quasis.Add(new TemplateElementNode { Value = remaining, Tail = false });
+               }
+           }
+       }
+
+       return templateLiteral;
+    }
 
      private BooleanLiteralNode ParseBooleanExpression()
      {
