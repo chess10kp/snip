@@ -4,6 +4,8 @@ public class Environment
 {
     private readonly Dictionary<string, Value> _bindings = new();
     private readonly Environment? _parent;
+    private readonly Dictionary<string, Module> _modules = new();
+    private readonly HashSet<string> _importedModules = new();
 
     public Environment(Environment? parent = null)
     {
@@ -55,7 +57,10 @@ public class Environment
 
     public void InitializeBuiltins()
     {
-        // print function
+        // Register standard library modules
+        StandardLibraryRegistry.RegisterAllModules(this);
+
+        // print function (overridden by std lib)
         Define("print", Value.NativeFunction(new NativeFunctionValue("print", args =>
         {
             foreach (var arg in args)
@@ -120,5 +125,52 @@ public class Environment
         }));
 
         Define("Math", Value.Object(mathObj));
+    }
+
+    public void ImportModule(string moduleName)
+    {
+        if (_importedModules.Contains(moduleName))
+            return; // Already imported
+
+        var module = StandardLibraryRegistry.GetModule(moduleName);
+        _modules[moduleName] = module;
+        _importedModules.Add(moduleName);
+
+        // Export all module functions to current environment
+        foreach (var export in module.Exports)
+        {
+            Define(export.Key, export.Value);
+        }
+    }
+
+    public void ImportFromModule(string moduleName, List<string> names)
+    {
+        Module module;
+        
+        // Check if module is already loaded
+        if (_modules.TryGetValue(moduleName, out module))
+        {
+            // Use existing module
+        }
+        else
+        {
+            // Load new module
+            module = StandardLibraryRegistry.GetModule(moduleName);
+            _modules[moduleName] = module;
+        }
+
+        // Export only requested names
+        foreach (var name in names)
+        {
+            var export = module.GetExport(name);
+            if (export != null)
+            {
+                Define(name, export);
+            }
+            else
+            {
+                throw new Exception($"Module '{moduleName}' does not export '{name}'");
+            }
+        }
     }
 }

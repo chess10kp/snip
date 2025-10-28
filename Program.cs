@@ -30,7 +30,6 @@ namespace Snip
             if (source is not null)
             {
                 // File mode
-                Console.WriteLine("Starting Compilation");
                 try
                 {
                     var lexer = new Lexer.Lexer(source);
@@ -45,7 +44,6 @@ namespace Snip
 
                     // Evaluate the program
                     evaluator.Eval(program, env);
-                    Console.Write("Finish Execution");
                 }
                 catch (Snip.Parser.ParsingError e)
                 {
