@@ -70,7 +70,14 @@ public static class StandardLibraryRegistry
     private static Value Str(List<Value> args)
     {
         ValidationHelpers.ValidateArgs(args, 1, 1, "str");
-        return Value.String(args[0].ToString());
+        var value = args[0];
+
+        if (value.Type == ValueType.Boolean)
+        {
+            return Value.String(((bool)value.Data!).ToString().ToLower());
+        }
+
+        return Value.String(value.ToString());
     }
 
     private static Value Int(List<Value> args)
@@ -79,11 +86,11 @@ public static class StandardLibraryRegistry
         var value = args[0];
 
         if (value.Type == ValueType.Number)
-            return value;
+            return Value.Number(Math.Floor((double)value.Data!));
         else if (value.Type == ValueType.String)
         {
             if (double.TryParse((string)value.Data!, out var num))
-                return Value.Number((int)num);
+                return Value.Number(Math.Floor(num));
             else
                 return Value.Number(0);
         }

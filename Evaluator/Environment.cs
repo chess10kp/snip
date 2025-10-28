@@ -136,7 +136,15 @@ public class Environment
         _modules[moduleName] = module;
         _importedModules.Add(moduleName);
 
-        // Export all module functions to current environment
+        // Create module object with exports
+        var moduleObject = new Dictionary<string, Value>();
+        foreach (var export in module.Exports)
+        {
+            moduleObject[export.Key] = export.Value;
+        }
+        Define(moduleName, Value.Object(moduleObject));
+
+        // Also export all module functions to current environment
         foreach (var export in module.Exports)
         {
             Define(export.Key, export.Value);

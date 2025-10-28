@@ -1387,18 +1387,29 @@ public class Evaluator
 
     private Value EvalImportDeclaration(ImportDeclaration node, Environment env)
     {
+        var moduleName = node.Source.Trim('"');
         try
         {
-            var source = File.ReadAllText(node.Source.Trim('"'));
-            var lexer = new Snip.Lexer.Lexer(source);
-            lexer.Tokenize();
-            var parser = new Snip.Parser.Parser(lexer);
-            var program = parser.Parse();
-            Eval(program, env);
+            // First try to import from standard library
+            env.ImportModule(moduleName);
+            return Value.Undefined();
         }
-        catch (Exception ex)
+        catch
         {
-            throw new Exception($"Failed to import {node.Source}: {ex.Message}");
+            // If not found in standard library, try to load from file
+            try
+            {
+                var source = File.ReadAllText(moduleName);
+                var lexer = new Snip.Lexer.Lexer(source);
+                lexer.Tokenize();
+                var parser = new Snip.Parser.Parser(lexer);
+                var program = parser.Parse();
+                Eval(program, env);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to import {moduleName}: {ex.Message}");
+            }
         }
         return Value.Undefined();
     }

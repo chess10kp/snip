@@ -147,8 +147,10 @@ public class Parser
            TokenType.Undefined => ParseUndefinedExpression(),
            TokenType.This => ParseThisExpression(),
            TokenType.Super => ParseSuperExpression(),
-           TokenType.Identifier => ParseIdentifierExpression(),
-           TokenType.LeftParen => ParseParenthesizedExpression(),
+            TokenType.Identifier => ParseIdentifierExpression(),
+            TokenType.String_Type => ParseIdentifierExpression(),
+            TokenType.Object_Type => ParseIdentifierExpression(),
+            TokenType.LeftParen => ParseParenthesizedExpression(),
            TokenType.LeftBrace => ParseObjectExpression(),
            TokenType.LeftBracket => ParseArrayExpression(),
             TokenType.Plus => ParseUnaryExpression(),
@@ -888,15 +890,15 @@ private ExpressionNode ParseObjectExpression()
 
     private IdentifierNode ParseIdentifierExpression()
     {
-       var tok = _peek();
-       if (tok is not { Type: TokenType.Identifier })
-          throw new ParsingError("Expected identifier");
-       _next();
-       return new IdentifierNode(tok.Value)
-       {
-           Line = tok.Line,
-           Column = tok.Column
-       };
+        var tok = _peek();
+        if (tok == null || (tok.Type != TokenType.Identifier && tok.Type != TokenType.String_Type && tok.Type != TokenType.Object_Type))
+           throw new ParsingError("Expected identifier");
+        _next();
+        return new IdentifierNode(tok.Value)
+        {
+            Line = tok.Line,
+            Column = tok.Column
+        };
     }
 
     private PatternNode ParsePattern()
@@ -1707,7 +1709,6 @@ node.Cases = new List<CaseNode>();
         if (_peek()?.Type != TokenType.String)
             throw new ParsingError("Expected string after 'from'");
         node.Source = ((StringLiteralNode)ParseStringExpression()).Value;
-        _next(); // consume string
 
         if (_peek()?.Type != TokenType.Semicolon)
             throw new ParsingError("Expected semicolon after import");

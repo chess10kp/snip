@@ -208,7 +208,7 @@ public class IntegrationTests
     {
         var code = "5 > 3;";
         var result = EvaluateToString(code);
-        Assert.Equal("True", result);
+        Assert.Equal("true", result);
     }
 
     [Fact]

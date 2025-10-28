@@ -169,7 +169,7 @@ public class Value
         {
             ValueType.Number => Data?.ToString() ?? "0.0",
             ValueType.String => $"\"{Data}\"",
-            ValueType.Boolean => Data?.ToString() ?? "false",
+            ValueType.Boolean => ((bool?)Data ?? false) ? "true" : "false",
             ValueType.Null => "null",
             ValueType.Undefined => "undefined",
             ValueType.Array => $"[{string.Join(", ", ((List<Value>)Data!).Select(v => v.ToString()))}]",
