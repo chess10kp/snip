@@ -12,6 +12,14 @@ public static class TypesModule
         // Type checking
         module.Export("type", Value.NativeFunction(new NativeFunctionValue("type", TypeOf)));
         module.Export("isinstance", Value.NativeFunction(new NativeFunctionValue("isinstance", IsInstance)));
+        module.Export("isnumber", Value.NativeFunction(new NativeFunctionValue("isnumber", IsNumber)));
+        module.Export("isstring", Value.NativeFunction(new NativeFunctionValue("isstring", IsString)));
+        module.Export("isboolean", Value.NativeFunction(new NativeFunctionValue("isboolean", IsBoolean)));
+        module.Export("isnull", Value.NativeFunction(new NativeFunctionValue("isnull", IsNull)));
+        module.Export("isundefined", Value.NativeFunction(new NativeFunctionValue("isundefined", IsUndefined)));
+        module.Export("isarray", Value.NativeFunction(new NativeFunctionValue("isarray", IsArray)));
+        module.Export("isobject", Value.NativeFunction(new NativeFunctionValue("isobject", IsObject)));
+        module.Export("isfunction", Value.NativeFunction(new NativeFunctionValue("isfunction", IsFunction)));
 
         // Conversion
         module.Export("str", Value.NativeFunction(new NativeFunctionValue("str", ToString)));

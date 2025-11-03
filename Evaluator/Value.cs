@@ -184,4 +184,41 @@ public class Value
             _ => "unknown"
         };
     }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is Value other)
+        {
+            if (Type != other.Type)
+                return false;
+            
+            return Type switch
+            {
+                ValueType.Number => Math.Abs((double)Data! - (double)other.Data!) < 0.0001,
+                ValueType.String => string.Equals((string)Data!, (string)other.Data!),
+                ValueType.Boolean => (bool)Data! == (bool)other.Data!,
+                ValueType.Null => other.Type == ValueType.Null,
+                ValueType.Undefined => other.Type == ValueType.Undefined,
+                ValueType.Array => Data!.Equals(other.Data),
+                ValueType.Object => Data!.Equals(other.Data),
+                _ => false
+            };
+        }
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return Type switch
+        {
+            ValueType.Number => Data?.GetHashCode() ?? 0,
+            ValueType.String => Data?.GetHashCode() ?? 0,
+            ValueType.Boolean => Data?.GetHashCode() ?? 0,
+            ValueType.Null => 0,
+            ValueType.Undefined => 0,
+            ValueType.Array => Data?.GetHashCode() ?? 0,
+            ValueType.Object => Data?.GetHashCode() ?? 0,
+            _ => 0
+        };
+    }
 }

@@ -40,6 +40,18 @@ public static class MathModule
         module.Export("log2", Value.NativeFunction(new NativeFunctionValue("log2", Log2)));
         module.Export("exp", Value.NativeFunction(new NativeFunctionValue("exp", Exp)));
         
+        // Haskell Prelude functions
+        module.Export("even", Value.NativeFunction(new NativeFunctionValue("even", Even)));
+        module.Export("odd", Value.NativeFunction(new NativeFunctionValue("odd", Odd)));
+        module.Export("gcd", Value.NativeFunction(new NativeFunctionValue("gcd", Gcd)));
+        module.Export("lcm", Value.NativeFunction(new NativeFunctionValue("lcm", Lcm)));
+        module.Export("signum", Value.NativeFunction(new NativeFunctionValue("signum", Signum)));
+        module.Export("recip", Value.NativeFunction(new NativeFunctionValue("recip", Recip)));
+        module.Export("quot", Value.NativeFunction(new NativeFunctionValue("quot", Quot)));
+        module.Export("rem", Value.NativeFunction(new NativeFunctionValue("rem", Rem)));
+        module.Export("div", Value.NativeFunction(new NativeFunctionValue("div", Div)));
+        module.Export("mod", Value.NativeFunction(new NativeFunctionValue("mod", Mod)));
+        
         return module;
     }
     
@@ -193,5 +205,119 @@ public static class MathModule
         ValidationHelpers.ValidateArgs(args, 1, 1, "exp");
         var num = ValidationHelpers.GetNumber(args, 0);
         return new Value(ValueType.Number, Math.Exp(num));
+    }
+    
+    // Haskell Prelude functions
+    private static Value Even(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 1, 1, "even");
+        var num = ValidationHelpers.GetNumber(args, 0);
+        return new Value(ValueType.Boolean, num % 2 == 0 && num != 0);
+    }
+    
+    private static Value Odd(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 1, 1, "odd");
+        var num = ValidationHelpers.GetNumber(args, 0);
+        return new Value(ValueType.Boolean, num % 2 != 0);
+    }
+    
+    private static Value Gcd(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 2, 2, "gcd");
+        var a = Math.Abs(ValidationHelpers.GetNumber(args, 0));
+        var b = Math.Abs(ValidationHelpers.GetNumber(args, 1));
+        
+        while (b > 0.0001) // Use epsilon for floating point comparison
+        {
+            var temp = b;
+            b = a % b;
+            a = temp;
+        }
+        
+        return new Value(ValueType.Number, a);
+    }
+    
+    private static Value Lcm(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 2, 2, "lcm");
+        var a = Math.Abs(ValidationHelpers.GetNumber(args, 0));
+        var b = Math.Abs(ValidationHelpers.GetNumber(args, 1));
+        
+        var gcdValue = Gcd(new List<Value> { Value.Number(a), Value.Number(b) });
+        return new Value(ValueType.Number, Math.Abs(a * b) / (gcdValue.Data as double? ?? 1));
+    }
+    
+    private static Value Signum(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 1, 1, "signum");
+        var num = ValidationHelpers.GetNumber(args, 0);
+        
+        if (num > 0) return new Value(ValueType.Number, 1);
+        if (num < 0) return new Value(ValueType.Number, -1);
+        return new Value(ValueType.Number, 0);
+    }
+    
+    private static Value Recip(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 1, 1, "recip");
+        var num = ValidationHelpers.GetNumber(args, 0);
+        
+        if (num == 0)
+            throw new Exception("Division by zero in recip");
+            
+        return new Value(ValueType.Number, 1.0 / num);
+    }
+    
+    private static Value Quot(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 2, 2, "quot");
+        var a = ValidationHelpers.GetNumber(args, 0);
+        var b = ValidationHelpers.GetNumber(args, 1);
+        
+        if (Math.Abs(b) < 0.0001)
+            throw new Exception("Division by zero in quot");
+            
+        return new Value(ValueType.Number, Math.Truncate(a / b));
+    }
+    
+    private static Value Rem(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 2, 2, "rem");
+        var a = ValidationHelpers.GetNumber(args, 0);
+        var b = ValidationHelpers.GetNumber(args, 1);
+        
+        if (Math.Abs(b) < 0.0001)
+            throw new Exception("Division by zero in rem");
+            
+        return new Value(ValueType.Number, a % b);
+    }
+    
+    private static Value Div(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 2, 2, "div");
+        var a = ValidationHelpers.GetNumber(args, 0);
+        var b = ValidationHelpers.GetNumber(args, 1);
+        
+        if (Math.Abs(b) < 0.0001)
+            throw new Exception("Division by zero in div");
+            
+        return new Value(ValueType.Number, Math.Floor(a / b));
+    }
+    
+    private static Value Mod(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 2, 2, "mod");
+        var a = ValidationHelpers.GetNumber(args, 0);
+        var b = ValidationHelpers.GetNumber(args, 1);
+        
+        if (Math.Abs(b) < 0.0001)
+            throw new Exception("Division by zero in mod");
+            
+        var result = a % b;
+        if ((result < 0 && b > 0) || (result > 0 && b < 0))
+            result += b;
+            
+        return new Value(ValueType.Number, result);
     }
 }

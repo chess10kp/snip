@@ -102,4 +102,67 @@ public class StandardLibraryTests
         Assert.Equal("true", EvaluateToString("import from \"types\"; types.isinstance('hello', 'string');"));
         Assert.Equal("\"{\"a\":1}\"", EvaluateToString("import from \"types\"; types.json_stringify({a: 1});"));
     }
+    
+    [Fact]
+    public void TestHaskellPreludeMathFunctions()
+    {
+        Assert.Equal("true", EvaluateToString("import from \"math\"; math.even(4);"));
+        Assert.Equal("false", EvaluateToString("import from \"math\"; math.even(5);"));
+        Assert.Equal("false", EvaluateToString("import from \"math\"; math.odd(4);"));
+        Assert.Equal("true", EvaluateToString("import from \"math\"; math.odd(5);"));
+        Assert.Equal("6", EvaluateToString("import from \"math\"; math.gcd(48, 18);"));
+        Assert.Equal("42", EvaluateToString("import from \"math\"; math.lcm(21, 6);"));
+        Assert.Equal("-1", EvaluateToString("import from \"math\"; math.signum(-5);"));
+        Assert.Equal("0", EvaluateToString("import from \"math\"; math.signum(0);"));
+        Assert.Equal("1", EvaluateToString("import from \"math\"; math.signum(7);"));
+        Assert.Equal("0.25", EvaluateToString("import from \"math\"; math.recip(4);"));
+        Assert.Equal("3", EvaluateToString("import from \"math\"; math.quot(17, 5);"));
+        Assert.Equal("2", EvaluateToString("import from \"math\"; math.rem(17, 5);"));
+        Assert.Equal("3", EvaluateToString("import from \"math\"; math.div(17, 5);"));
+        Assert.Equal("2", EvaluateToString("import from \"math\"; math.mod(17, 5);"));
+    }
+    
+    [Fact]
+    public void TestHaskellPreludeArrayFunctions()
+    {
+        Assert.Equal("1", EvaluateToString("import from \"array\"; array.head([1, 2, 3]);"));
+        Assert.Equal("[2, 3]", EvaluateToString("import from \"array\"; array.tail([1, 2, 3]);"));
+        Assert.Equal("[1, 2]", EvaluateToString("import from \"array\"; array.init([1, 2, 3]);"));
+        Assert.Equal("3", EvaluateToString("import from \"array\"; array.last([1, 2, 3]);"));
+        Assert.Equal("true", EvaluateToString("import from \"array\"; array.isNull([]);"));
+        Assert.Equal("false", EvaluateToString("import from \"array\"; array.isNull([1]);"));
+        Assert.Equal("3", EvaluateToString("import from \"array\"; array.length([1, 2, 3]);"));
+        Assert.Equal("[1, 2]", EvaluateToString("import from \"array\"; array.take(2, [1, 2, 3]);"));
+        Assert.Equal("[3]", EvaluateToString("import from \"array\"; array.drop(2, [1, 2, 3]);"));
+        Assert.Equal("[[1, 2], [3]]", EvaluateToString("import from \"array\"; array.splitAt(2, [1, 2, 3]);"));
+        Assert.Equal("true", EvaluateToString("import from \"array\"; array.elem(2, [1, 2, 3]);"));
+        Assert.Equal("false", EvaluateToString("import from \"array\"; array.elem(4, [1, 2, 3]);"));
+        Assert.Equal("1", EvaluateToString("import from \"array\"; array.elemIndex(2, [1, 2, 3]);"));
+        Assert.Equal("-1", EvaluateToString("import from \"array\"; array.elemIndex(4, [1, 2, 3]);"));
+    }
+    
+    [Fact]
+    public void TestHaskellPreludeStringFunctions()
+    {
+        Assert.Equal("[\"hello\", \"world\"]", EvaluateToString("import from \"string\"; string.words(\"hello world\");"));
+        Assert.Equal("[\"line1\", \"line2\"]", EvaluateToString("import from \"string\"; string.lines(\"line1\\nline2\");"));
+        Assert.Equal("\"line1\nline2\"", EvaluateToString("import from \"string\"; string.unlines([\"line1\", \"line2\"]);"));
+        Assert.Equal("\"hello world\"", EvaluateToString("import from \"string\"; string.unwords([\"hello\", \"world\"]);"));
+        Assert.Equal("\"dlrow\"", EvaluateToString("import from \"string\"; string.reverse(\"world\");"));
+        Assert.Equal("\"hello\"", EvaluateToString("import from \"string\"; string.take(5, \"hello world\");"));
+        Assert.Equal("\"world\"", EvaluateToString("import from \"string\"; string.drop(6, \"hello world\");"));
+    }
+    
+    [Fact]
+    public void TestHaskellPreludeObjectFunctions()
+    {
+        Assert.Equal("2", EvaluateToString("import from \"object\"; object.lookup({a: 1, b: 2}, 'b');"));
+        Assert.Equal("null", EvaluateToString("import from \"object\"; object.lookup({a: 1, b: 2}, 'c');"));
+        Assert.Equal("\"default\"", EvaluateToString("import from \"object\"; object.lookup({a: 1, b: 2}, 'c', 'default');"));
+        Assert.Equal("true", EvaluateToString("import from \"object\"; object.member({a: 1, b: 2}, 'a');"));
+        Assert.Equal("false", EvaluateToString("import from \"object\"; object.member({a: 1, b: 2}, 'c');"));
+        Assert.Equal("{\"a\": 1, \"b\": 2, \"c\": 3}", EvaluateToString("import from \"object\"; object.union({a: 1, b: 2}, {c: 3});"));
+        Assert.Equal("{\"b\": 2}", EvaluateToString("import from \"object\"; object.intersection({a: 1, b: 2}, {b: 2, c: 3});"));
+        Assert.Equal("{\"a\": 1}", EvaluateToString("import from \"object\"; object.difference({a: 1, b: 2}, {b: 2});"));
+    }
 }

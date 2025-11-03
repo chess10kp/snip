@@ -41,6 +41,15 @@ public static class StringModule
         module.Export("isalnum", Value.NativeFunction(new NativeFunctionValue("isalnum", IsAlnum)));
         module.Export("isspace", Value.NativeFunction(new NativeFunctionValue("isspace", IsSpace)));
         
+        // Haskell Prelude functions
+        module.Export("words", Value.NativeFunction(new NativeFunctionValue("words", Words)));
+        module.Export("lines", Value.NativeFunction(new NativeFunctionValue("lines", Lines)));
+        module.Export("unlines", Value.NativeFunction(new NativeFunctionValue("unlines", UnLines)));
+        module.Export("unwords", Value.NativeFunction(new NativeFunctionValue("unwords", UnWords)));
+        module.Export("reverse", Value.NativeFunction(new NativeFunctionValue("reverse", Reverse)));
+        module.Export("take", Value.NativeFunction(new NativeFunctionValue("take", Take)));
+        module.Export("drop", Value.NativeFunction(new NativeFunctionValue("drop", Drop)));
+        
         return module;
     }
     
@@ -282,5 +291,71 @@ public static class StringModule
         ValidationHelpers.ValidateArgs(args, 1, 1, "isspace");
         var str = ValidationHelpers.GetString(args, 0);
         return Value.Boolean(str.All(char.IsWhiteSpace));
+    }
+    
+    // Haskell Prelude functions
+    private static Value Words(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 1, 1, "words");
+        var str = ValidationHelpers.GetString(args, 0);
+        var words = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return Value.Array(words.Select(w => Value.String(w)).ToList());
+    }
+    
+    private static Value Lines(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 1, 1, "lines");
+        var str = ValidationHelpers.GetString(args, 0);
+        var lines = str.Split('\n');
+        return Value.Array(lines.Select(l => Value.String(l)).ToList());
+    }
+    
+    private static Value UnLines(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 1, 1, "unlines");
+        var array = ValidationHelpers.GetArray(args, 0);
+        var strings = array.Select(v => v.Type == ValueType.String ? (string)v.Data! : v.ToString()).ToList();
+        return Value.String(string.Join("\n", strings));
+    }
+    
+    private static Value UnWords(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 1, 1, "unwords");
+        var array = ValidationHelpers.GetArray(args, 0);
+        var strings = array.Select(v => v.Type == ValueType.String ? (string)v.Data! : v.ToString()).ToList();
+        return Value.String(string.Join(" ", strings));
+    }
+    
+    private static Value Reverse(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 1, 1, "reverse");
+        var str = ValidationHelpers.GetString(args, 0);
+        var chars = str.ToCharArray();
+        Array.Reverse(chars);
+        return Value.String(new string(chars));
+    }
+    
+    private static Value Take(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 2, 2, "take");
+        var n = ValidationHelpers.GetInt(args, 0);
+        var str = ValidationHelpers.GetString(args, 1);
+        
+        n = n < 0 ? str.Length + n : n;
+        n = Math.Min(n, str.Length);
+        
+        return Value.String(str.Substring(0, n));
+    }
+    
+    private static Value Drop(List<Value> args)
+    {
+        ValidationHelpers.ValidateArgs(args, 2, 2, "drop");
+        var n = ValidationHelpers.GetInt(args, 0);
+        var str = ValidationHelpers.GetString(args, 1);
+        
+        n = n < 0 ? str.Length + n : n;
+        n = Math.Min(n, str.Length);
+        
+        return Value.String(str.Substring(n));
     }
 }

@@ -15,6 +15,12 @@ public static class StandardLibraryRegistry
         _modules["object"] = ObjectModule.CreateModule;
         _modules["io"] = IOModule.CreateModule;
         _modules["types"] = TypesModule.CreateModule;
+        _modules["random"] = RandomModule.CreateModule;
+        _modules["datetime"] = DateTimeModule.CreateModule;
+        _modules["file"] = FileModule.CreateModule;
+        _modules["regex"] = RegexModule.CreateModule;
+        _modules["collections"] = CollectionsModule.CreateModule;
+        _modules["itertools"] = ItertoolsModule.CreateModule;
     }
     
     public static Module GetModule(string moduleName)
